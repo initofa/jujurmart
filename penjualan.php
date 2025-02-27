@@ -30,8 +30,9 @@ function generate_penjualan_id($conn) {
 $new_penjualan_id = generate_penjualan_id($conn);
 $now = date('Y-m-d H:i:s');
 
-// Hitung total item untuk kategori Makanan
+// Hitung total item untuk kategori Makanan (hanya stok > 0)
 $sql_count_makanan = "SELECT COUNT(*) AS total FROM menu WHERE jenis = 'Makanan' 
+                      AND stok > 0 
                       AND (nama LIKE '%$search_keyword%' OR jenis LIKE '%$search_keyword%')";
 $result_count_makanan = mysqli_query($conn, $sql_count_makanan);
 if (!$result_count_makanan) {
@@ -40,8 +41,9 @@ if (!$result_count_makanan) {
 $row_count_makanan = mysqli_fetch_assoc($result_count_makanan);
 $total_items_makanan = $row_count_makanan['total'];
 
-// Hitung total item untuk kategori Minuman
+// Hitung total item untuk kategori Minuman (hanya stok > 0)
 $sql_count_minuman = "SELECT COUNT(*) AS total FROM menu WHERE jenis = 'Minuman' 
+                      AND stok > 0 
                       AND (nama LIKE '%$search_keyword%' OR jenis LIKE '%$search_keyword%')";
 $result_count_minuman = mysqli_query($conn, $sql_count_minuman);
 if (!$result_count_minuman) {
@@ -50,9 +52,12 @@ if (!$result_count_minuman) {
 $row_count_minuman = mysqli_fetch_assoc($result_count_minuman);
 $total_items_minuman = $row_count_minuman['total'];
 
-// Query untuk mengambil data menu
-$query_menu = "SELECT * FROM menu";
+// Query untuk mengambil data menu (hanya menu dengan stok > 0)
+$query_menu = "SELECT * FROM menu WHERE stok > 0";
 $result_menu = mysqli_query($conn, $query_menu);
+if (!$result_menu) {
+    die("Query error: " . mysqli_error($conn));
+}
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Ambil data dari form
@@ -95,25 +100,35 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     mysqli_stmt_bind_param($stmt, "sssdds", $idpenjualan, $tanggal, $nama, $grandtotal, $jenispembayaran, $buktiNamaFile);
     mysqli_stmt_execute($stmt);
 
-    // Simpan detail penjualan ke tabel detilpenjualan
-    foreach ($_POST['idmenu'] as $key => $idmenu) {
-        $namamenu = $_POST['namamenu'][$key];
-        $harga = (float) str_replace(',', '.', str_replace('.', '', $_POST['harga'][$key])); // Format harga
-        $jumlah = (int) $_POST['jumlah'][$key];
-        $total = $harga * $jumlah;
+   // Simpan detail penjualan ke tabel detilpenjualan dan kurangi stok
+foreach ($_POST['idmenu'] as $key => $idmenu) {
+    $namamenu = $_POST['namamenu'][$key];
+    $harga = (float) str_replace(',', '.', str_replace('.', '', $_POST['harga'][$key])); // Format harga
+    $jumlah = (int) $_POST['jumlah'][$key];
+    $total = $harga * $jumlah;
 
-        $query_detail = "INSERT INTO detilpenjualan (idpenjualan, idmenu, namamenu, harga, jumlah, total) 
-                         VALUES (?, ?, ?, ?, ?, ?)";
-        $stmt_detail = mysqli_prepare($conn, $query_detail);
-        if (!$stmt_detail) {
-            die("Error: " . mysqli_error($conn)); // Tampilkan pesan error jika query gagal
-        }
-        mysqli_stmt_bind_param($stmt_detail, "sssdds", $idpenjualan, $idmenu, $namamenu, $harga, $jumlah, $total);
-        mysqli_stmt_execute($stmt_detail);
+    // Simpan detail penjualan
+    $query_detail = "INSERT INTO detilpenjualan (idpenjualan, idmenu, namamenu, harga, jumlah, total) 
+                     VALUES (?, ?, ?, ?, ?, ?)";
+    $stmt_detail = mysqli_prepare($conn, $query_detail);
+    if (!$stmt_detail) {
+        die("Error: " . mysqli_error($conn)); // Tampilkan pesan error jika query gagal
     }
+    mysqli_stmt_bind_param($stmt_detail, "sssdds", $idpenjualan, $idmenu, $namamenu, $harga, $jumlah, $total);
+    mysqli_stmt_execute($stmt_detail);
+
+    // Kurangi stok menu
+    $query_kurangi_stok = "UPDATE menu SET stok = stok - ? WHERE idmenu = ?";
+    $stmt_kurangi_stok = mysqli_prepare($conn, $query_kurangi_stok);
+    if (!$stmt_kurangi_stok) {
+        die("Error: " . mysqli_error($conn)); // Tampilkan pesan error jika query gagal
+    }
+    mysqli_stmt_bind_param($stmt_kurangi_stok, "is", $jumlah, $idmenu);
+    mysqli_stmt_execute($stmt_kurangi_stok);
+}
 
     // Redirect ke halaman selesai
-    echo "<script> window.location.href='selesai.php'; </script>";
+    echo "<script> window.location.href='berhasil.php'; </script>";
     exit();
 }
 ?>
@@ -131,6 +146,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="w3.css">
     <link rel="icon" type="image/png" href="jujurmart.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 
@@ -976,7 +992,7 @@ input:checked + .slider:before {
   padding: 10px;
   border: none; /* Hilangkan border */
   font-size: 14px;
-  color: #009688; /* Warna teks sesuai permintaan */
+  color: green; /* Warna teks sesuai permintaan */
   font-weight: bold; /* Mengatur font menjadi tebal */
   box-sizing: border-box;
   background: transparent; /* Menghilangkan background */
@@ -1239,21 +1255,25 @@ function closeModalOnClickOutside(event) {
 
 
 <!--                                         MODAL UNTUK MENGISI NAMA                     -->
-<div id="id01" class="w3-modal">
-  <div class="w3-modal-content w3-animate-zoom">
-    <header class="w3-container w3-green"> 
+<div id="id01" class="w3-modal" style="display: none;">
+  <div class="w3-modal-content w3-animate-top w3-card-4" style="max-width: 400px; border-radius: 10px; overflow: hidden;">
+    <header class="w3-container w3-green w3-padding-16" style="border-top-left-radius: 10px; border-top-right-radius: 10px;">
       <span onclick="document.getElementById('id01').style.display='none'" 
-      class="w3-button w3-display-topright">&times;</span>
-      <h2 style="text-align: center;">eitss isi nama dulu</h2>
+      class="w3-button w3-display-topright w3-hover-red" style="font-size: 20px; font-weight: bold;">&times;</span>
+      <h2 class="w3-center">⚠️ Eitss, isi nama dulu!</h2>
     </header>
-    <div class="w3-container">
-      <form id="modalForm" method="POST">
-        <div class="form-group">
-          <label for="modalNama">Nama:</label>
-          <input type="text" class="form-control" id="modalNama" name="nama" placeholder="Nama" required>
-        </div>
-        <button type="button" class="w3-button w3-green" id="submitModalButton" onclick="submitModalData()">Simpan</button>
 
+    <div class="w3-container w3-padding">
+      <form id="modalForm" method="POST">
+        <div class="w3-section">
+          <label for="modalNama" class="w3-text-grey" style="font-weight: bold;">Nama:</label>
+          <input type="text" class="w3-input w3-border w3-round-large" id="modalNama" name="nama" placeholder="Masukkan nama" required>
+        </div>
+
+        <button type="button" class="w3-button w3-green w3-round-large w3-block w3-hover-light-green" 
+        id="submitModalButton" onclick="submitModalData()" style="font-size: 16px; padding: 10px;">
+          Simpan
+        </button>
       </form>
     </div>
   </div>
@@ -1315,25 +1335,28 @@ function submitModalData() {
     <div id="sidebarOverlay" class="w3-overlay" onclick="w3_close()"></div>
     <!-- Sidebar -->
     <div class="w3-sidebar w3-bar-block w3-border-right w3-light-grey" id="mySidebar">
-        <button onclick="w3_close()" class="w3-bar-item w3-button w3-red w3-center close-button">
-            <b>Close</b><i class="fa fa-close" style="font-size:20px"></i>
-        </button>
-        <a href="list_barang.php" class="w3-bar-item w3-button w3-border">List Barang</a>
-        <a href="list_pengguna.php" class="w3-bar-item w3-button w3-border">List Pengguna</a>
-        <a href="list_meja.php" class="w3-bar-item w3-button w3-border">List Meja</a>
-        <?php if ($user_record === 'admin') { ?>
-        <a href="list_pesanan.php" class="w3-bar-item w3-button w3-border">List Pesanan</a>
-        <?php } ?>
-        <a href="pesanan.php" class="w3-bar-item w3-button w3-border">Pesanan</a>
-        <a href="logout.php" class="w3-bar-item w3-button w3-red w3-center"><b>Log Out </b><i class="fa fa-sign-out"
-                style="font-size:20px"></i></a>
+    <button onclick="w3_close()" class="w3-bar-item w3-button w3-red w3-center close-button">
+    <b>Close</b> <i class="fa fa-close" style="font-size:20px; margin-left:5px;"></i>
+</button>
+    <a href="list_menu.php" class="w3-bar-item w3-button w3-border w3-hover-green">
+        <i class="fas fa-utensils"></i> <span class="menu-text">List Menu</span>
+    </a>
+    <a href="list_penjualan.php" class="w3-bar-item w3-button w3-border w3-hover-green">
+        <i class="fas fa-clipboard-list"></i> <span class="menu-text">List Penjualan</span>
+    </a>
+    <a href="dashboard.php" class="w3-bar-item w3-button w3-border w3-hover-green">
+        <i class="fas fa-chart-bar"></i> <span class="menu-text">Dashboard</span>
+    </a>
+    <a href="logout.php" class="w3-bar-item w3-button w3-red w3-center">
+    <b>Log Out </b> <i class="fas fa-sign-out-alt" style="font-size:20px"></i>
+    </a>
     </div>
 
     <!--                                   -------     HEADER          -------                         -->
-    <div class="w3-teal fixed-header" style="display: flex; align-items: center;">
+    <div class="w3-green fixed-header" style="display: flex; align-items: center;">
         <button class="w3-button w3-xlarge" onclick="w3_open()">☰</button>
         <div style="flex-grow: 1; display: flex; justify-content: center;">
-            <h1 style="margin: 0; line-height: 3.5rem; margin-bottom:10px; font-size: 30px;"><b>FORM CHECK OUT</b></h1>
+            <h1 style="margin: 0; line-height: 3.5rem; margin-bottom:10px; font-size: 30px;"><b>CHECK OUT</b></h1>
         </div>
     </div>
         <!--                             --------       HEADER        ---------                           -->
@@ -1366,11 +1389,11 @@ function submitModalData() {
                 <div style="display: flex; font-size: 14px;">
                 <div style="flex: 1; text-align: left;">
                 <span style="font-size: 16px; color: black; font-weight: bold;">NAMA BARANG</span><br><span
-                    style="font-size: 16px; color: green; font-weight: bold;">HARGA</span>
-                    <span style="font-size: 16px; color: #009688; font-weight: bold;">JUMLAH</span> <br>
+                    style="font-size: 16px; color: red; font-weight: bold;">HARGA</span>
+                    <span style="font-size: 16px; color: green; font-weight: bold;">JUMLAH</span> <br>
                 </div>
             </th><!-- <th>Jumlah</th> -->
-            <th style="text-align: right; color: black;"><b>AK</b><span style="color: black;"><b>SI</b></span><br>
+            <th style="text-align: right; color: black;"><b>AC</b><span style="color: black;"><b>TION</b></span><br>
                 <span style="color: green;"><b>TOTAL</b></span>
             </th>
         </tr>
@@ -1398,36 +1421,40 @@ function submitModalData() {
 <!--            TOMBOL TAMBAH PESANAN LAINNYA                -->
 
     <div class="w3-section">
-        <strong>GRAND TOTAL:</strong>
+        <strong>GRAND TOTAL: Rp</strong>
         <input type="text" class="form-control" id="grandtotal" name="grandtotal" readonly>
     </div>
 
     <div class="form-group">
-        <label for="jenispembayaran">JENIS PEMBAYARAN:</label>
-        <select class="form-control" id="jenispembayaran" name="jenispembayaran" required>
-        <option>CASH</option>
-        </select>
+    <label for="jenispembayaran">JENIS PEMBAYARAN:</label>
+    <select class="form-control" id="jenispembayaran" name="jenispembayaran" required onchange="togglePayButton()">
+        <option value="" disabled selected>Pilih Jenis Pembayaran</option>
+        <option value="CASH">CASH</option>
+        <option value="TRANSFER">TRANSFER</option>
+    </select>
     </div>
 
-
-    <label>Bukti Transaksi</label>
-<input type="file" class="w3-input w3-border w3-light-grey" 
+    <label>BUKTI TRANSAKSI :</label>
+    <input type="file" class="w3-input w3-border w3-light-grey" 
        name="buktitransaksi" id="gambarUpload" accept="image/*" capture="camera" 
-       onchange="previewFile()" required><br>
+       onchange="previewFile(); togglePayButton()" required><br>
 
-<!-- Preview Gambar -->
-<div style="display: flex; flex-direction: column; align-items: center;">
+    <!-- Preview Gambar -->
+    <div style="display: flex; flex-direction: column; align-items: center;">
     <img id="previewImage" src="" alt="Preview Gambar Baru" 
          style="max-width: 200px; height: auto; display: none; margin-bottom: 10px;">
-    <div id="noImageText" class="w3-text-red" style="text-align: center;">masukkan bukti transaksi</div>
-</div><br>
+    <div id="noImageText" class="w3-text-red" style="text-align: center;">
+        Masukkan bukti transaksi <br>
+        <small>- Foto yang dibeli</small> <br>
+        <small>- Jika bayar cash, foto dengan uangnya</small>
+    </div>
+    </div><br>
 
-
-<button type="button" class="w3-button w3-green w3-margin-top" id="payButton" 
-        onclick="openModal()" disabled style="border-radius: 7px;">
-    BAYAR
-</button>
-
+    <!-- Tombol SELESAI -->
+    <button type="button" class="w3-button w3-green w3-margin-top" id="payButton" 
+        onclick="openModal()" disabled style="border-radius: 7px; opacity: 0.5; cursor: not-allowed;">
+    SELESAI
+    </button>
  </form>
         <br>
 <!--                                    ======+    FORM UNTUK MENGIRIM DATA KE DATABSAE      +=====                  --> 
@@ -1614,7 +1641,7 @@ function addSelectedItemToOrder() {
                         <div class="bottom-row">
                             <div class="left-section">
                                 <!-- Harga & Kuantitas -->
-                                <span class="price-input" style="color: green; font-weight: bold; font-size: 14px;">
+                                <span class="price-input" style="color: red; font-weight: bold; font-size: 14px;">
                                     ${harga.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                 </span>
                                 <span class="quantity-x"> x </span>
@@ -1902,7 +1929,7 @@ function updateTotal() {
 
     // Update total section
     document.getElementById('total-items').textContent = totalItems; // Total jumlah barang unik
-    document.getElementById('total-price').textContent = 'Rp. ' + totalPrice.toLocaleString('id-ID');
+    document.getElementById('total-price').textContent = 'Rp ' + totalPrice.toLocaleString('id-ID');
 
     // Show or hide the checkout container based on the number of items
     const checkoutContainer = document.querySelector('.checkout-container');
@@ -2064,17 +2091,26 @@ function validateForm() {
 
 //  FUNGSI INI DI GUNAKAN UNTUK MELANJUTKAN MEMBUKA MODAL NAMA DAN NO TELEPON KETIKA SUDAH TERISI SEMUA (TABEL)
 function togglePayButton() {
+    var jenispembayaran = document.getElementById('jenispembayaran').value;
+    var buktitransaksi = document.getElementById('gambarUpload').files.length > 0;
     var orderItems = document.getElementById('orderItems');
     var payButton = document.getElementById('payButton');
 
-    console.log('Jumlah item di tabel:', orderItems.rows.length);  // Tambahkan log ini untuk debugging
+    console.log("Jenis Pembayaran:", jenispembayaran);  // Debugging
+    console.log("Bukti Transaksi:", buktitransaksi);   // Debugging
+    console.log("Jumlah item di tabel:", orderItems ? orderItems.rows.length : 0);  // Debugging
 
-    if (orderItems && orderItems.rows.length > 1) {
+    if (jenispembayaran !== "" && buktitransaksi && orderItems && orderItems.rows.length > 1) {
         payButton.disabled = false;
+        payButton.style.opacity = "1";
+        payButton.style.cursor = "pointer";
     } else {
         payButton.disabled = true;
+        payButton.style.opacity = "0.5";
+        payButton.style.cursor = "not-allowed";
     }
 }
+
 //  FUNGSI INI DI GUNAKAN UNTUK MELANJUTKAN MEMBUKA MODAL NAMA DAN NO TELEPON KETIKA SUDAH TERISI SEMUA (TABEL)
 
 // FUNGSI INI DI GUNAKAN UNTUK TANGGAL DAN WAKTU
@@ -2179,7 +2215,7 @@ function updateCartModal() {
     cartTotalHeaderItems.textContent = totalUniqueItems;
 
     // Update total harga dalam format IDR
-    cartTotalPrice.textContent = `Rp. ${totalPrice.toLocaleString('id-ID')}`;
+    cartTotalPrice.textContent = `Rp ${totalPrice.toLocaleString('id-ID')}`;
 
     // Perbarui grand total setelah update
     calculateTotal();
