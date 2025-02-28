@@ -116,7 +116,7 @@ if (isset($_SESSION["username"])) {
         </header>
         <div class="w3-container w3-center">
             <p>Anda belum dikonfirmasi. Klik tombol di bawah untuk menghubungi admin:</p>
-            <a href="https://wa.me/6281999925324?text=Assalamualaikum,%20saya%20membutuhkan%20bantuan%20untuk%20konfirmasi%20akun%20jujurmart." 
+            <a href="https://wa.me/6282330101990?text=Assalamu%27alaikum,%20saya%20mohon%20bantuan%20untuk%20konfirmasi%20akun%20JujurMart.%20Terima%20kasih."
                target="_blank" class="w3-button w3-green w3-round" style="margin-bottom: 15px; padding: 8px 15px;">
                 <i class="fab fa-whatsapp"></i> Hubungi admin
             </a>
