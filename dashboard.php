@@ -391,7 +391,7 @@ foreach ($penjualan_data as $data) {
         <i class="fas fa-clipboard-list"></i> <span class="menu-text">List Penjualan</span>
     </a>
     <a href="#" class="w3-bar-item w3-button w3-border w3-hover-green">
-        <i class="fas fa-chart-line"></i> <span class="menu-text">Dashboard</span>
+        <i class="fas fa-chart-bar"></i> <span class="menu-text">Dashboard</span>
     </a>
     <?php if ($_SESSION['username'] == 'admin') { ?>
         <a href="list_pengguna.php" class="w3-bar-item w3-button w3-border w3-hover-green">

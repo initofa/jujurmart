@@ -169,9 +169,9 @@ mysqli_close($conn);
 
 <!-- Sidebar -->
 <div class="w3-sidebar w3-bar-block w3-border-right w3-light-grey" id="mySidebar">
-    <button onclick="w3_close()" class="w3-bar-item w3-button w3-red w3-center close-button">
-        <b>Close</b> <i class="fa fa-close" style="font-size:20px"></i>
-    </button>
+<button onclick="w3_close()" class="w3-bar-item w3-button w3-red w3-center close-button">
+    <b>Close</b> <i class="fa fa-close" style="font-size:20px; margin-left:5px;"></i>
+</button>
     <a href="list_menu.php" class="w3-bar-item w3-button w3-border w3-hover-green">
         <i class="fas fa-utensils"></i> <span class="menu-text">List Menu</span>
     </a>
@@ -179,7 +179,7 @@ mysqli_close($conn);
         <i class="fas fa-clipboard-list"></i> <span class="menu-text">List Penjualan</span>
     </a>
     <a href="dashboard.php" class="w3-bar-item w3-button w3-border w3-hover-green">
-        <i class="fas fa-chart-line"></i> <span class="menu-text">Dashboard</span>
+        <i class="fas fa-chart-bar"></i> <span class="menu-text">Dashboard</span>
     </a>
     <?php if ($_SESSION['username'] == 'admin') { ?>
         <a href="list_pengguna.php" class="w3-bar-item w3-button w3-border w3-hover-green">

@@ -26,6 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET' && isset($_GET['action']) && $_GET['acti
         $folder_gambar = 'gambar/menu/';
         
         // Loop through all allowed extensions and try to find the image
+        $extensions = ['jpg', 'jpeg', 'png', 'gif']; // Daftar ekstensi yang diizinkan
         foreach ($extensions as $ext) {
             $gambar_lama = $folder_gambar . $id_menu . '.' . $ext;
 
@@ -41,27 +42,38 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET' && isset($_GET['action']) && $_GET['acti
         mysqli_begin_transaction($conn);
 
         try {
-             // Delete menu
-             $sql_delete_menu = "DELETE FROM menu WHERE idmenu = ?";
-             $stmt_menu = mysqli_prepare($conn, $sql_delete_menu);
-             mysqli_stmt_bind_param($stmt_menu, 's', $id_menu); // 's' untuk string
-             if (!mysqli_stmt_execute($stmt_menu)) {
+            // Delete menu
+            $sql_delete_menu = "DELETE FROM menu WHERE idmenu = ?";
+            $stmt_menu = mysqli_prepare($conn, $sql_delete_menu);
+            if (!$stmt_menu) {
+                throw new Exception("Error preparing statement: " . mysqli_error($conn));
+            }
+            mysqli_stmt_bind_param($stmt_menu, 's', $id_menu); // 's' untuk string
+        
+            // Eksekusi query
+            if (!mysqli_stmt_execute($stmt_menu)) {
                 throw new Exception("Error deleting from menu: " . mysqli_error($conn));
-              }
-
-            // Commit transaction
+            }
+        
+            // Commit transaksi jika berhasil
             mysqli_commit($conn);
-
-            // Redirect to list_menu.php
+        
+            // Redirect ke list_menu.php
             header('Location: list_menu.php');
             exit;
         } catch (Exception $e) {
-            // Rollback transaction if error occurs
+            // Rollback transaksi jika terjadi error
             mysqli_rollback($conn);
-            $pesan_error = "Tidak bisa dihapus, menu sudah terdaftar di transaksi."; // Set error message for modal
+        
+            // Cek apakah error disebabkan oleh foreign key constraint
+            if (strpos($e->getMessage(), "foreign key constraint fails") !== false) {
+                $pesan_error = "Tidak bisa dihapus, menu sudah terdaftar di transaksi.";
+            } else {
+                $pesan_error = "Terjadi kesalahan: " . $e->getMessage();
+            }
         }
     } else {
-        $pesan_error = "Invalid ID."; // Set error message for modal
+        $pesan_error = "ID menu tidak valid."; // Set error message for invalid ID
     }
 }
 
@@ -94,7 +106,7 @@ if ($username === 'admin') {
             FROM menu
             WHERE (nama LIKE '%$search_keyword%' 
                    OR jenis LIKE '%$search_keyword%')
-            ORDER BY idmenu DESC
+            ORDER BY daterecord DESC
             LIMIT $offset, $records_per_page";
 } else {
     $sql = "SELECT idmenu, nama,gambar, jenis, stok, harga
@@ -102,7 +114,7 @@ if ($username === 'admin') {
             WHERE (nama LIKE '%$search_keyword%' 
                    OR jenis LIKE '%$search_keyword%')
             AND userrecord = '$username'
-            ORDER BY idmenu DESC
+            ORDER BY daterecord DESC
             LIMIT $offset, $records_per_page";
 }
 
@@ -272,9 +284,9 @@ if ($totalResult) {
 
     <!-- Sidebar -->
 <div class="w3-sidebar w3-bar-block w3-border-right w3-light-grey" id="mySidebar">
-    <button onclick="w3_close()" class="w3-bar-item w3-button w3-red w3-center close-button">
-        <b>Close</b> <i class="fa fa-close" style="font-size:20px"></i>
-    </button>
+<button onclick="w3_close()" class="w3-bar-item w3-button w3-red w3-center close-button">
+    <b>Close</b> <i class="fa fa-close" style="font-size:20px; margin-left:5px;"></i>
+</button>
     <a href="#" class="w3-bar-item w3-button w3-border w3-hover-green">
         <i class="fas fa-utensils"></i> <span class="menu-text">List Menu</span>
     </a>
@@ -282,7 +294,7 @@ if ($totalResult) {
         <i class="fas fa-clipboard-list"></i> <span class="menu-text">List Penjualan</span>
     </a>
     <a href="dashboard.php" class="w3-bar-item w3-button w3-border w3-hover-green">
-        <i class="fas fa-chart-line"></i> <span class="menu-text">Dashboard</span>
+        <i class="fas fa-chart-bar"></i> <span class="menu-text">Dashboard</span>
     </a>
     <?php if ($_SESSION['username'] == 'admin') { ?>
         <a href="list_pengguna.php" class="w3-bar-item w3-button w3-border w3-hover-green">
@@ -485,7 +497,7 @@ if ($totalResult) {
                 </div>
             </div>
         </div>
-        <!-- Error Modal -->
+      <!-- Error Modal -->
 <?php if (isset($pesan_error)): ?>
     <div id="errorModal" class="w3-modal" onclick="closeModal1(event)" style="align-items:center; padding-top: 15%;">
         <div class="w3-modal-content w3-animate-top w3-card-4">

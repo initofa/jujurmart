@@ -228,29 +228,30 @@ if ($totalResult) {
     <!-- Sidebar Overlay -->
     <div id="sidebarOverlay" class="w3-sidebar-overlay" onclick="w3_close()"></div>
 
-<!-- Sidebar -->
-<div class="w3-sidebar w3-bar-block w3-border-right w3-light-grey" id="mySidebar">
-    <button onclick="w3_close()" class="w3-bar-item w3-button w3-red w3-center close-button">
-        <b>Close</b> <i class="fa fa-close" style="font-size:20px"></i>
-    </button>
-    <a href="list_menu.php" class="w3-bar-item w3-button w3-border w3-hover-teal">
+  <!-- Sidebar -->
+  <div class="w3-sidebar w3-bar-block w3-border-right w3-light-grey" id="mySidebar">
+  <button onclick="w3_close()" class="w3-bar-item w3-button w3-red w3-center close-button">
+    <b>Close</b> <i class="fa fa-close" style="font-size:20px; margin-left:5px;"></i>
+</button>
+    <a href="list_menu.php" class="w3-bar-item w3-button w3-border w3-hover-green">
         <i class="fas fa-utensils"></i> <span class="menu-text">List Menu</span>
     </a>
-    <a href="list_pesanan.php" class="w3-bar-item w3-button w3-border w3-hover-teal">
-        <i class="fas fa-clipboard-list"></i> <span class="menu-text">List Pesanan</span>
+    <a href="list_penjualan.php" class="w3-bar-item w3-button w3-border w3-hover-green">
+        <i class="fas fa-clipboard-list"></i> <span class="menu-text">List Penjualan</span>
     </a>
-    <a href="dashboard.php" class="w3-bar-item w3-button w3-border w3-hover-teal">
-        <i class="fas fa-chart-line"></i> <span class="menu-text">Dashboard</span>
+    <a href="dashboard.php" class="w3-bar-item w3-button w3-border w3-hover-green">
+        <i class="fas fa-chart-bar"></i> <span class="menu-text">Dashboard</span>
     </a>
     <?php if ($_SESSION['username'] == 'admin') { ?>
-        <a href="list_pengguna.php" class="w3-bar-item w3-button w3-border w3-hover-teal">
+        <a href="#" class="w3-bar-item w3-button w3-border w3-hover-green">
             <i class="fas fa-users"></i> <span class="menu-text">List Pengguna</span>
         </a>
     <?php } ?>
     <a href="logout.php" class="w3-bar-item w3-button w3-red w3-center">
-    <b>Log Out </b> <i class="fa fa-sign-out" style="font-size:20px"></i>
+    <b>Log Out </b> <i class="fas fa-sign-out-alt" style="font-size:20px"></i>
     </a>
 </div>
+<!-- End Sidebar -->
 
     <!-- Page Content -->
     <div id="mainContent" style="margin-left: 0; transition: margin-left 0.5s;">
@@ -263,13 +264,13 @@ if ($totalResult) {
                 </h1>
                 <div style="display: flex; font-size: 14px;">
                     <div style="flex: 1; text-align: center;">
-                        <span style="font-size: 15px; font-weight: bold;">Username</span> <br>
+                        <span style="font-size: 15px; font-weight: bold;">USERNAME</span> <br>
                     </div>
                     <div style="flex: 1; text-align: center;">
-                        <span style="font-size: 15px; font-weight: bold;">Nama</span>
+                        <span style="font-size: 15px; font-weight: bold;">NAMA</span>
                     </div>
                         <div style="flex: 1; text-align: center;">
-                            <span style="font-size: 16px; font-weight: bold;">Action</span>
+                            <span style="font-size: 16px; font-weight: bold;">ACTION</span>
                         </div>
                 </div>
             </div>
