@@ -206,17 +206,17 @@ mysqli_close($conn);
 
     <!-- Sidebar -->
 <div class="w3-sidebar w3-bar-block w3-border-right w3-light-grey" id="mySidebar">
-    <button onclick="w3_close()" class="w3-bar-item w3-button w3-red w3-center close-button">
-        <b>Close</b> <i class="fa fa-close" style="font-size:20px"></i>
-    </button>
+<button onclick="w3_close()" class="w3-bar-item w3-button w3-red w3-center close-button">
+    <b>Close</b> <i class="fa fa-close" style="font-size:20px; margin-left:5px;"></i>
+</button>
     <a href="list_menu.php" class="w3-bar-item w3-button w3-border w3-hover-green">
         <i class="fas fa-utensils"></i> <span class="menu-text">List Menu</span>
     </a>
-    <a href="list_pesanan.php" class="w3-bar-item w3-button w3-border w3-hover-green">
-        <i class="fas fa-clipboard-list"></i> <span class="menu-text">List Pesanan</span>
+    <a href="list_penjualan.php" class="w3-bar-item w3-button w3-border w3-hover-green">
+        <i class="fas fa-clipboard-list"></i> <span class="menu-text">List Penjualan</span>
     </a>
     <a href="dashboard.php" class="w3-bar-item w3-button w3-border w3-hover-green">
-        <i class="fas fa-chart-line"></i> <span class="menu-text">Dashboard</span>
+        <i class="fas fa-chart-bar"></i> <span class="menu-text">Dashboard</span>
     </a>
     <?php if ($_SESSION['username'] == 'admin') { ?>
         <a href="list_pengguna.php" class="w3-bar-item w3-button w3-border w3-hover-green">
@@ -257,27 +257,28 @@ mysqli_close($conn);
     oninput="handleInput(this);" required>
 <input type="hidden" id="harga_hidden" name="harga"><br>
 
-        <!-- Image upload field for multiple images -->
-        <label>Gambar</label>
-        <input type="file" id="gambar" name="gambar" class="w3-input w3-border w3-light-grey" multiple oninput="checkChanges()"><br>
+   <!-- Image upload field for multiple images -->
+<label>Gambar</label>
+<input type="file" id="gambar" name="gambar[]" class="w3-input w3-border w3-light-grey" multiple accept="image/*" onchange="previewImages()" oninput="checkChanges()"><br>
 
-        <?php
-// Pastikan mengambil gambar berdasarkan nama file di kolom 'gambar'
-if (!empty($menu_data['gambar'])) {
-    $image_path = "gambar/menu/" . $menu_data['gambar'];
-    if (file_exists($image_path)) {
-        echo "<img src='$image_path' alt='Gambar menu' style='max-width: 100px; height: auto;'><br>";
+<!-- Preview Gambar -->
+<div>
+    <?php
+    // Pastikan mengambil gambar berdasarkan nama file di kolom 'gambar'
+    $image_path = !empty($menu_data['gambar']) ? "gambar/menu/" . $menu_data['gambar'] : "";
+    
+    if (!empty($menu_data['gambar']) && file_exists($image_path)) {
+        echo "<img id='previewImage' src='$image_path' alt='Gambar menu' 
+              style='max-width: 200px; height: auto; margin-bottom: 10px; display: block;'>";
     } else {
-        echo "<p style='color: red;'>Gambar tidak ditemukan: " . htmlspecialchars($menu_data['gambar']) . "</p>";
+        echo "<p style='color: red;'>Gambar tidak tersedia</p>";
+        echo "<img id='previewImage' src='' alt='Preview Gambar Baru' 
+              style='max-width: 300px; height: auto; display: none;'>";
     }
-} else {
-    echo "<p style='color: red;'>Gambar tidak tersedia</p>";
-}
-?>
-        <br>
-         <!-- Input User Modified -->
-        <label for="usermodified">User Modified</label>
-        <input type="text" id="usermodified" name="usermodified" class="w3-input w3-border w3-light-grey"
+    ?>
+</div><br>
+    
+        <input type="hidden" id="usermodified" name="usermodified" class="w3-input w3-border w3-light-grey"
           value="<?php echo htmlspecialchars($user_modified); ?>" readonly><br>
 
         <div class="w3-half">
@@ -292,6 +293,21 @@ if (!empty($menu_data['gambar'])) {
 
     <!-- JavaScript -->
     <script>
+  function previewImages() {
+    let previewImage = document.getElementById('previewImage');
+    let file = document.getElementById('gambar').files[0];
+    
+    if (file) {
+        let reader = new FileReader();
+        reader.onload = function(e) {
+            previewImage.src = e.target.result;
+            previewImage.style.display = 'block';
+        }
+        reader.readAsDataURL(file);
+    } else {
+        previewImage.style.display = 'none';
+    }
+}
         function w3_open() {
             document.getElementById("mySidebar").classList.add("show");
             document.getElementById("sidebarOverlay").classList.add("show");

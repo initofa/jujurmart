@@ -181,9 +181,9 @@ mysqli_close($conn);
 
    <!-- Sidebar -->
 <div class="w3-sidebar w3-bar-block w3-border-right w3-light-grey" id="mySidebar">
-    <button onclick="w3_close()" class="w3-bar-item w3-button w3-red w3-center close-button">
-        <b>Close</b> <i class="fa fa-close" style="font-size:20px"></i>
-    </button>
+<button onclick="w3_close()" class="w3-bar-item w3-button w3-red w3-center close-button">
+    <b>Close</b> <i class="fa fa-close" style="font-size:20px; margin-left:5px;"></i>
+</button>
     <a href="list_menu.php" class="w3-bar-item w3-button w3-border w3-hover-green">
         <i class="fas fa-utensils"></i> <span class="menu-text">List Menu</span>
     </a>
@@ -191,7 +191,7 @@ mysqli_close($conn);
         <i class="fas fa-clipboard-list"></i> <span class="menu-text">List Penjualan</span>
     </a>
     <a href="dashboard.php" class="w3-bar-item w3-button w3-border w3-hover-green">
-        <i class="fas fa-chart-line"></i> <span class="menu-text">Dashboard</span>
+        <i class="fas fa-chart-bar"></i> <span class="menu-text">Dashboard</span>
     </a>
     <?php if ($_SESSION['username'] == 'admin') { ?>
         <a href="list_pengguna.php" class="w3-bar-item w3-button w3-border w3-hover-green">
@@ -245,7 +245,14 @@ mysqli_close($conn);
         <input type="text" class="w3-input w3-border w3-light-grey" name="harga" required><br>
 
         <label>Gambar</label>
-        <input type="file" class="w3-input w3-border w3-light-grey" name="gambar" required><br>
+        <input type="file" id="gambarUpload" class="w3-input w3-border w3-light-grey" name="gambar" required onchange="previewFile()"><br>
+
+        <!-- Preview Gambar -->
+        <div>
+        <img id="previewImage" src="" alt="Preview Gambar Baru" 
+         style="max-width: 200px; height: auto; display: none; margin-bottom: 10px;">
+        <div id="noImageText" class="w3-text-red">Masukkan Gambar Menu!</div>
+        </div>
 
         <input type="hidden" name="userrecord" value="<?php echo htmlspecialchars($user_record); ?>" required readonly><br>
         <input type="hidden" name="usermodified" value="<?php echo htmlspecialchars($user_record); ?>">
@@ -338,6 +345,40 @@ mysqli_close($conn);
                 });
             });
         });
+
+        function previewFile() {
+    const input = document.getElementById('gambarUpload');
+    const preview = document.getElementById('previewImage');
+    const noImageText = document.getElementById('noImageText');
+
+    // Cek apakah file dipilih
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+
+        // Validasi tipe file (hanya gambar)
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+        if (!allowedTypes.includes(file.type)) {
+            alert("Hanya file gambar (JPEG, PNG, GIF) yang diperbolehkan.");
+            input.value = ""; // Reset input file
+            preview.style.display = "none";
+            noImageText.style.display = "block";
+            return;
+        }
+
+        // Tampilkan preview gambar
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            preview.src = e.target.result;
+            preview.style.display = "block";
+            noImageText.style.display = "none";
+        };
+        reader.readAsDataURL(file);
+    } else {
+        // Jika tidak ada file, sembunyikan preview dan tampilkan pesan
+        preview.style.display = "none";
+        noImageText.style.display = "block";
+    }
+}
     </script>
 </body>
 
