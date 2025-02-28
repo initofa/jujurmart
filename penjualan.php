@@ -64,25 +64,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $idpenjualan = $_POST['idpenjualan'];
     $tanggal = $_POST['tanggal'];
     $nama = $_POST['nama'];
-    $grandtotal = str_replace('.', '', $_POST['grandtotal']); // Hapus titik sebagai pemisah ribuan
+    $grandtotal = str_replace('.', '', $_POST['grandtotal']); // Hapus titik pemisah ribuan
     $grandtotal = str_replace(',', '.', $grandtotal); // Ganti koma dengan titik untuk format desimal
-    $jenispembayaran = $_POST['jenispembayaran'];
-    $target_dir = "gambar/buktitransaksi/"; // Folder tempat menyimpan gambar
-    $buktiNamaFile = ""; // Default jika tidak ada gambar yang diupload
+    $jenispembayaran = isset($_POST['jenispembayaran']) ? $_POST['jenispembayaran'] : ''; // Pastikan tidak null
+    $target_dir = "gambar/buktitransaksi/";
+    $buktiNamaFile = "";
 
-    // Proses upload gambar jika ada file yang diunggah
+  
+    // Proses upload gambar jika ada file
     if (isset($_FILES["buktitransaksi"]) && $_FILES["buktitransaksi"]["error"] == 0) {
-        $file_ext = pathinfo($_FILES["buktitransaksi"]["name"], PATHINFO_EXTENSION); // Ambil ekstensi file
-        $buktiNamaFile = $idpenjualan . "." . $file_ext; // Nama file berdasarkan idpenjualan
+        $file_ext = pathinfo($_FILES["buktitransaksi"]["name"], PATHINFO_EXTENSION);
+        $buktiNamaFile = $idpenjualan . "." . $file_ext;
         $target_file = $target_dir . $buktiNamaFile;
 
-        // Validasi jenis file (hanya gambar)
+        // Validasi jenis file
         $allowed_types = ['jpg', 'jpeg', 'png', 'gif'];
         if (!in_array(strtolower($file_ext), $allowed_types)) {
             die("Error: Hanya file JPG, JPEG, PNG, dan GIF yang diperbolehkan.");
         }
 
-        // Pindahkan file ke folder
         if (!move_uploaded_file($_FILES["buktitransaksi"]["tmp_name"], $target_file)) {
             die("Error: Gagal mengunggah gambar.");
         }
@@ -93,41 +93,44 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Simpan data ke tabel penjualan
     $query = "INSERT INTO penjualan (idpenjualan, tanggal, nama, grandtotal, jenispembayaran, buktitransaksi) 
               VALUES (?, ?, ?, ?, ?, ?)";
+    
     $stmt = mysqli_prepare($conn, $query);
     if (!$stmt) {
-        die("Error: " . mysqli_error($conn)); // Tampilkan pesan error jika query gagal
+        die("Error: " . mysqli_error($conn));
     }
-    mysqli_stmt_bind_param($stmt, "sssdds", $idpenjualan, $tanggal, $nama, $grandtotal, $jenispembayaran, $buktiNamaFile);
+
+    // Pastikan semua parameter string
+    mysqli_stmt_bind_param($stmt, "ssssss", $idpenjualan, $tanggal, $nama, $grandtotal, $jenispembayaran, $buktiNamaFile);
     mysqli_stmt_execute($stmt);
 
-   // Simpan detail penjualan ke tabel detilpenjualan dan kurangi stok
-foreach ($_POST['idmenu'] as $key => $idmenu) {
-    $namamenu = $_POST['namamenu'][$key];
-    $harga = (float) str_replace(',', '.', str_replace('.', '', $_POST['harga'][$key])); // Format harga
-    $jumlah = (int) $_POST['jumlah'][$key];
-    $total = $harga * $jumlah;
+    // Simpan detail penjualan ke tabel detilpenjualan dan kurangi stok
+    foreach ($_POST['idmenu'] as $key => $idmenu) {
+        $namamenu = $_POST['namamenu'][$key];
+        $harga = (float) str_replace(',', '.', str_replace('.', '', $_POST['harga'][$key]));
+        $jumlah = (int) $_POST['jumlah'][$key];
+        $total = $harga * $jumlah;
 
-    // Simpan detail penjualan
-    $query_detail = "INSERT INTO detilpenjualan (idpenjualan, idmenu, namamenu, harga, jumlah, total) 
-                     VALUES (?, ?, ?, ?, ?, ?)";
-    $stmt_detail = mysqli_prepare($conn, $query_detail);
-    if (!$stmt_detail) {
-        die("Error: " . mysqli_error($conn)); // Tampilkan pesan error jika query gagal
+        // Simpan detail penjualan
+        $query_detail = "INSERT INTO detilpenjualan (idpenjualan, idmenu, namamenu, harga, jumlah, total) 
+                         VALUES (?, ?, ?, ?, ?, ?)";
+        $stmt_detail = mysqli_prepare($conn, $query_detail);
+        if (!$stmt_detail) {
+            die("Error: " . mysqli_error($conn));
+        }
+        mysqli_stmt_bind_param($stmt_detail, "sssdds", $idpenjualan, $idmenu, $namamenu, $harga, $jumlah, $total);
+        mysqli_stmt_execute($stmt_detail);
+
+        // Kurangi stok menu
+        $query_kurangi_stok = "UPDATE menu SET stok = stok - ? WHERE idmenu = ?";
+        $stmt_kurangi_stok = mysqli_prepare($conn, $query_kurangi_stok);
+        if (!$stmt_kurangi_stok) {
+            die("Error: " . mysqli_error($conn));
+        }
+        mysqli_stmt_bind_param($stmt_kurangi_stok, "is", $jumlah, $idmenu);
+        mysqli_stmt_execute($stmt_kurangi_stok);
     }
-    mysqli_stmt_bind_param($stmt_detail, "sssdds", $idpenjualan, $idmenu, $namamenu, $harga, $jumlah, $total);
-    mysqli_stmt_execute($stmt_detail);
 
-    // Kurangi stok menu
-    $query_kurangi_stok = "UPDATE menu SET stok = stok - ? WHERE idmenu = ?";
-    $stmt_kurangi_stok = mysqli_prepare($conn, $query_kurangi_stok);
-    if (!$stmt_kurangi_stok) {
-        die("Error: " . mysqli_error($conn)); // Tampilkan pesan error jika query gagal
-    }
-    mysqli_stmt_bind_param($stmt_kurangi_stok, "is", $jumlah, $idmenu);
-    mysqli_stmt_execute($stmt_kurangi_stok);
-}
-
-    // Redirect ke halaman selesai
+    // Redirect ke halaman sukses
     echo "<script> window.location.href='berhasil.php'; </script>";
     exit();
 }
@@ -152,21 +155,40 @@ foreach ($_POST['idmenu'] as $key => $idmenu) {
 
 <style>
     
-/*                       CSS WARNA HIJAU SAAT DI TEKAN                   */
+/*                      CSS WARNA MENU MAKANAN DAN MINUMAN                  */
+.filter-buttons {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 20px;
+}
+
+/* Tombol Default */
 .filter-buttons button {
     position: relative;
     z-index: 1;
-    border-radius: 5px;
+    border-radius: 30px; /* Bentuk lebih bulat */
     overflow: hidden;
-    transition: transform 0.3s ease-in-out;
+    color: #218838; /* Warna hijau gelap untuk teks */
+    border: 2px solid #218838; /* Border hijau */
+    padding: 12px 24px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease-in-out;
+    background: #fff; /* Background putih */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
+/* Hover Effect */
 .filter-buttons button:hover {
-    transform: scale(1.05); /* Membesarkan tombol sedikit saat dihover */
-    animation: rotatingGlow 2s infinite; /* Terapkan animasi */
+    background: linear-gradient(45deg, #28a745, #32cd32); /* Gradasi hijau */
+    color: #fff; /* Teks putih saat hover */
+    border: 2px solid #28a745;
+    transform: scale(1.05);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
 }
 
-/* Cahaya hanya muncul saat hover */
+/* Efek Cahaya Hover */
 .filter-buttons button:after {
     content: '';
     position: absolute;
@@ -175,16 +197,48 @@ foreach ($_POST['idmenu'] as $key => $idmenu) {
     width: 200%;
     height: 200%;
     border-radius: 50%;
-    background: rgba(0, 255, 0, 0.3);
+    background: radial-gradient(circle, rgba(40, 167, 69, 0.3), transparent 70%);
     opacity: 0;
     transition: opacity 0.3s ease-in-out;
+    animation: glowEffect 3s linear infinite;
 }
 
 .filter-buttons button:hover:after {
     opacity: 1;
-    animation: rotatingGlow 2s infinite;
 }
-/*                      CSS WARNA HIJAU SAAT DI TEKAN                   */
+
+/* Keyframes Animasi Cahaya */
+@keyframes glowEffect {
+    0% {
+        transform: scale(1);
+        opacity: 0.6;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 0.8;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 0.6;
+    }
+}
+
+/* Tombol Aktif */
+.filter-buttons button.active {
+    background: linear-gradient(45deg, #218838, #28a745);
+    color: #fff;
+    border: 2px solid #218838;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transform: scale(1.05);
+}
+
+/* Hover pada Tombol Aktif */
+.filter-buttons button.active:hover {
+    background: linear-gradient(45deg, #1e7e34, #218838);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+}
+
+/*                      CSS WARNA MENU MAKANAN DAN MINUMAN                   */
 
 
 
@@ -700,26 +754,7 @@ input:checked + .slider:before {
             display: block;
         }
       /*                      ====== CSS UNTUK MENU ======               */
-/*                      --------    CSS UNTUK TOMBOL MAKANAN DAN MINUMAN    -----------                 */
-.filter-buttons {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: 20px;
-}
-.filter-buttons button {
-    margin-left: 10px; /* Space between buttons */
-    background-color: #007bff; /* Blue background color */
-    color: #fff; /* White text color */
-    border: none; /* Remove border */
-    border-radius: 4px; /* Rounded corners */
-    padding: 10px 20px; /* Padding inside the button */
-    font-size: 16px; /* Font size */
-    cursor: pointer; /* Pointer cursor on hover */
-}
-.filter-buttons button:hover {
-    background-color: #0056b3; /* Darker blue on hover */
-}
-/*                      --------    CSS UNTUK TOMBOL MAKANAN DAN MINUMAN    -----------                 */
+
 
 /*              --------------------    CSS UNTUK ORDER ATAU TABLE  ------------------      */
 .order-row {
@@ -1429,8 +1464,12 @@ function submitModalData() {
     <label for="jenispembayaran">JENIS PEMBAYARAN:</label>
     <select class="form-control" id="jenispembayaran" name="jenispembayaran" required onchange="togglePayButton()">
         <option value="" disabled selected>Pilih Jenis Pembayaran</option>
-        <option value="CASH">CASH</option>
-        <option value="TRANSFER">TRANSFER</option>
+        <option value="cash">Cash</option>
+        <option value="bank_transfer">Bank Transfer</option>
+        <option value="gopay">GoPay</option>
+        <option value="dana">dana</option>
+        <option value="shopeepay">ShopeePay</option>
+        <option value="qris">QRIS</option>
     </select>
     </div>
 
