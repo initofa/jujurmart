@@ -64,14 +64,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $idpenjualan = $_POST['idpenjualan'];
     $tanggal = $_POST['tanggal'];
     $nama = $_POST['nama'];
-    $grandtotal = str_replace('.', '', $_POST['grandtotal']); // Hapus titik pemisah ribuan
-    $grandtotal = str_replace(',', '.', $grandtotal); // Ganti koma dengan titik untuk format desimal
-    $jenispembayaran = isset($_POST['jenispembayaran']) ? $_POST['jenispembayaran'] : ''; // Pastikan tidak null
+
+    // Konversi grandtotal dan bayar menjadi angka yang benar
+    $grandtotal = (float) str_replace(',', '.', str_replace('.', '', $_POST['grandtotal']));
+    $bayar = (float) str_replace(',', '.', str_replace('.', '', $_POST['bayar']));
+    
+    // Hitung kembalian
+    $kembalian = $bayar - $grandtotal;
+
+    // Jika kembalian negatif, jadikan 0 (untuk menghindari kesalahan input)
+    if ($kembalian < 0) {
+        $kembalian = 0;
+    }
+
+    // Proses upload gambar bukti transaksi
     $target_dir = "gambar/buktitransaksi/";
     $buktiNamaFile = "";
 
-  
-    // Proses upload gambar jika ada file
     if (isset($_FILES["buktitransaksi"]) && $_FILES["buktitransaksi"]["error"] == 0) {
         $file_ext = pathinfo($_FILES["buktitransaksi"]["name"], PATHINFO_EXTENSION);
         $buktiNamaFile = $idpenjualan . "." . $file_ext;
@@ -83,6 +92,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             die("Error: Hanya file JPG, JPEG, PNG, dan GIF yang diperbolehkan.");
         }
 
+        // Upload file
         if (!move_uploaded_file($_FILES["buktitransaksi"]["tmp_name"], $target_file)) {
             die("Error: Gagal mengunggah gambar.");
         }
@@ -91,22 +101,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 
     // Simpan data ke tabel penjualan
-    $query = "INSERT INTO penjualan (idpenjualan, tanggal, nama, grandtotal, jenispembayaran, buktitransaksi) 
-              VALUES (?, ?, ?, ?, ?, ?)";
-    
+    $query = "INSERT INTO penjualan (idpenjualan, tanggal, nama, grandtotal, bayar, kembalian, buktitransaksi) 
+              VALUES (?, ?, ?, ?, ?, ?, ?)";
     $stmt = mysqli_prepare($conn, $query);
     if (!$stmt) {
         die("Error: " . mysqli_error($conn));
     }
 
-    // Pastikan semua parameter string
-    mysqli_stmt_bind_param($stmt, "ssssss", $idpenjualan, $tanggal, $nama, $grandtotal, $jenispembayaran, $buktiNamaFile);
+    // Binding parameter
+    mysqli_stmt_bind_param($stmt, "sssddds", $idpenjualan, $tanggal, $nama, $grandtotal, $bayar, $kembalian, $buktiNamaFile);
     mysqli_stmt_execute($stmt);
 
     // Simpan detail penjualan ke tabel detilpenjualan dan kurangi stok
     foreach ($_POST['idmenu'] as $key => $idmenu) {
         $namamenu = $_POST['namamenu'][$key];
-        $harga = (float) str_replace(',', '.', str_replace('.', '', $_POST['harga'][$key]));
+
+        // Pastikan harga diformat dengan benar sebelum disimpan
+        $harga = (float) str_replace(',', '.', str_replace('.', '', $_POST['harga'][$key])); 
         $jumlah = (int) $_POST['jumlah'][$key];
         $total = $harga * $jumlah;
 
@@ -1288,8 +1299,7 @@ function closeModalOnClickOutside(event) {
 <!-- END MODAL TAMBAH BARANG -->
 
 
-
-<!--                                         MODAL UNTUK MENGISI NAMA                     -->
+<!-- MODAL UNTUK MENGISI NAMA -->
 <div id="id01" class="w3-modal" style="display: none;">
   <div class="w3-modal-content w3-animate-top w3-card-4" style="max-width: 400px; border-radius: 10px; overflow: hidden;">
     <header class="w3-container w3-green w3-padding-16" style="border-top-left-radius: 10px; border-top-right-radius: 10px;">
@@ -1299,22 +1309,22 @@ function closeModalOnClickOutside(event) {
     </header>
 
     <div class="w3-container w3-padding">
-      <form id="modalForm" method="POST">
+      <form id="modalForm" method="POST" action="create_transaction.php">
         <div class="w3-section">
-          <label for="modalNama" class="w3-text-grey" style="font-weight: bold;">Nama:</label>
-          <input type="text" class="w3-input w3-border w3-round-large" id="modalNama" name="nama" placeholder="Masukkan nama" required>
+          <label for="modalNama" class="w3-text-grey" style="font-weight: bold;">Nama :</label>
+          <input type="text" class="w3-input w3-border w3-round-large" id="modalNama" name="nama" placeholder="Masukkan nama" required style="width: 82%;">
         </div>
-
         <button type="button" class="w3-button w3-green w3-round-large w3-block w3-hover-light-green" 
-        id="submitModalButton" onclick="submitModalData()" style="font-size: 16px; padding: 10px;">
+        id="submitModalButton" onclick="submitModalData()" style="font-size: 16px; padding: 10px;" disabled>
           Simpan
         </button>
       </form>
     </div>
   </div>
 </div>
-<!--                                               MODAL UNTUK MENGISI NAMA DAN NO TELEPON                        -->
+<!-- MODAL UNTUK MENGISI NAMA -->
 
+<!-- SCRIPT UNTUK MENGISI NAMA -->
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     // Tambahkan event listener ke input nama untuk validasi
@@ -1361,9 +1371,7 @@ function submitModalData() {
     }
 }
 </script>
-
-            <!-- --------------------           SCRIPT UNTUK MENGISI NAMA DAN NO TELEPON         ------------------------ -->
-
+<!-- SCRIPT UNTUK MENGISI NAMA -->
 
 <!--                                             TOMBOL UNTUK MENU DAN HEADER                              -->
     <!-- Overlay Sidebar -->
@@ -1372,7 +1380,7 @@ function submitModalData() {
     <div class="w3-sidebar w3-bar-block w3-border-right w3-light-grey" id="mySidebar">
     <button onclick="w3_close()" class="w3-bar-item w3-button w3-red w3-center close-button">
     <b>Close</b> <i class="fa fa-close" style="font-size:20px; margin-left:5px;"></i>
-</button>
+    </button>
     <a href="list_menu.php" class="w3-bar-item w3-button w3-border w3-hover-green">
         <i class="fas fa-utensils"></i> <span class="menu-text">List Menu</span>
     </a>
@@ -1407,7 +1415,8 @@ function submitModalData() {
     </div>
 
 <!--                INPUT TERSEMBUNYI UNTUK MENGIRIMKAN DATA NAMA DAN KE DATABASE            -->
-    <input type="hidden" id="hiddenNama" name="nama">
+<input type="hidden" id="hiddenNama" name="nama">
+
 
 
 
@@ -1461,18 +1470,15 @@ function submitModalData() {
     </div>
 
     <div class="form-group">
-    <label for="jenispembayaran">JENIS PEMBAYARAN:</label>
-    <select class="form-control" id="jenispembayaran" name="jenispembayaran" required onchange="togglePayButton()">
-        <option value="" disabled selected>Pilih Jenis Pembayaran</option>
-        <option value="cash">Cash</option>
-        <option value="bank_transfer">Bank Transfer</option>
-        <option value="gopay">GoPay</option>
-        <option value="dana">dana</option>
-        <option value="shopeepay">ShopeePay</option>
-        <option value="qris">QRIS</option>
-    </select>
+    <label for="bayar">BAYAR</label>
+    <input type="text" id="bayar" name="bayar" class="form-control" oninput="formatInputBayar(this)" onchange="togglePayButton()">
     </div>
 
+    <div class="form-group">
+    <label for="kembalian">KEMBALIAN</label>
+    <input type="text" id="kembalian" name="kembalian" class="form-control" readonly>
+    </div>
+    
     <label>BUKTI TRANSAKSI :</label>
     <input type="file" class="w3-input w3-border w3-light-grey" 
        name="buktitransaksi" id="gambarUpload" accept="image/*" capture="camera" 
@@ -1483,21 +1489,26 @@ function submitModalData() {
     <img id="previewImage" src="" alt="Preview Gambar Baru" 
          style="max-width: 200px; height: auto; display: none; margin-bottom: 10px;">
     <div id="noImageText" class="w3-text-red" style="text-align: center;">
-        Masukkan bukti transaksi <br>
-        <small>- Foto yang dibeli</small> <br>
-        <small>- Jika bayar cash, foto dengan uangnya</small>
+        Harap unggah bukti transaksi: <br>
+        <small>- Foto produk yang telah dibeli</small> <br>
+        <small>- Foto uang pembayaran beserta kembaliannya</small>
     </div>
     </div><br>
 
     <!-- Tombol SELESAI -->
-    <button type="button" class="w3-button w3-green w3-margin-top" id="payButton" 
-        onclick="openModal()" disabled style="border-radius: 7px; opacity: 0.5; cursor: not-allowed;">
-    SELESAI
+    <div style="display: flex; justify-content: center; margin-top: 20px;">
+    <button type="button" id="payButton" onclick="openModal()" disabled
+        style="background-color: #28a745; color: white; font-size: 18px; font-weight: bold; padding: 12px 24px; border: none; border-radius: 10px; 
+              cursor: not-allowed; opacity: 0.5; transition: all 0.3s ease-in-out; box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);"
+        onmouseover="this.style.backgroundColor='#218838'; this.style.transform='scale(1.05)';" 
+        onmouseout="this.style.backgroundColor='#28a745'; this.style.transform='scale(1)';">
+        SELESAI
     </button>
+</div>
+
  </form>
         <br>
 <!--                                    ======+    FORM UNTUK MENGIRIM DATA KE DATABSAE      +=====                  --> 
-    
 <script> 
 /*                    ==============  SCRIPT UNTUK MODAL BARANG ATAU HALAMAN UTAMA -=========               */
 function openBarangModal() {
@@ -1939,9 +1950,6 @@ function addToCart() {
     // Tutup modal produk
     closeProductModal();
 }
-function closeProductModal() {
-    document.getElementById('productModal').style.display = 'none';
-}
 
 //       FUNGSI INI DI GUNAKAN UNTUK MENAMBAH BARANG KE TABEL ATAU ORDER ITEMS
 
@@ -2010,93 +2018,47 @@ function calculateRowTotal(input) {
 function updateGrandTotal() {
     let total = 0;
 
-    // Select all input elements with the name 'total[]'
+    // Ambil semua input dengan name 'total[]'
     const totalElements = document.querySelectorAll('input[name="total[]"]');
 
-    // Check if there are any 'total' elements left
     if (totalElements.length > 0) {
-        // Loop through each element and add up the total
         totalElements.forEach(function (element) {
-            // Convert the value from text format to a number
+            // Ambil nilai dan konversi ke angka, hilangkan format ribuan dan ubah koma menjadi titik
             let value = parseFloat(element.value.replace(/\./g, '').replace(',', '.'));
             if (!isNaN(value)) {
                 total += value;
             }
         });
-
-        // Format the total into Indonesian currency format (tanpa desimal)
-        let formattedTotal = total.toLocaleString('id-ID');
-
-        // Display the grand total in the input field
-        document.getElementById('grandtotal').value = formattedTotal;
-    } else {
-        // If no 'total' elements remain, set the grand total to 0
-        document.getElementById('grandtotal').value = '0';
     }
-}
 
+    // Format total tanpa desimal dan tanpa "Rp"
+    let formattedTotal = total.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+    // Tampilkan di input grandtotal
+    document.getElementById('grandtotal').value = formattedTotal || '0';
+}
 // FUNGSI INI DI GUNAKAN UNTUK MENGHITUNG TOTAL KESELURUHAN DARI SEMUA ELEMEN INPUT YANG MEMILIKI NAMA TOTAL[] DI MODAL CART
 
-//FUNGSI UNTUK MENUTUP MODAL BENAR DAN ERROR
-  // Function to close the success modal
-function closeSuccessModal() {
-            document.getElementById('successModal').style.display = 'none';
-            }
-            // Function to close the error modal
-function closeErrorModal() {
-             document.getElementById('errorModal').style.display = 'none';
-            }
-//FUNGSI UNTUK MENUTUP MODAL BENAR DAN ERROR
-
-// FUNGSI UNTUK MEMBUKA MENU DAN MENUTUP
-function w3_open() {
-            document.getElementById("mySidebar").classList.add("show");
-            document.getElementById("sidebarOverlay").classList.add("show");
-        }
-
-function w3_close() {
-            document.getElementById("mySidebar").classList.remove("show");
-            document.getElementById("sidebarOverlay").classList.remove("show");
-        }
-// FUNGSI UNTUK MEMBUKA MENU DAN MENUTUP
-
 // FUNGSI INI DI GUNAKAN UNTUK MENGHITUNG GRAND TOTAL DI TABLE ORDER ITEMS
-        function calculateTotal() {
+function calculateTotal() {
     var orderItems = document.getElementById('orderItems');
     var totalInputs = orderItems.querySelectorAll('.total-input');
     var grandTotal = 0;
 
     totalInputs.forEach(function(totalInput) {
-        // Pastikan untuk membersihkan format angka sebelum melakukan perhitungan
+        // Bersihkan format angka sebelum perhitungan
         var rowTotal = parseFloat(totalInput.value.replace(/\./g, '').replace(',', '.')) || 0;
         grandTotal += rowTotal;
     });
 
-    // Tampilkan nilai grand total
+    // Format angka tanpa "Rp"
     document.getElementById('grandtotal').value = grandTotal.toLocaleString('id-ID', { 
-        minimumFractionDigits: 2, 
-        maximumFractionDigits: 2 
+        minimumFractionDigits: 0, 
+        maximumFractionDigits: 0 
     });
-
-    // Panggil calculateKembali untuk menghitung kembalian setelah grand total di-update
-    // calculateKembali();
 }
 // FUNGSI INI DI GUNAKAN UNTUK MENGHITUNG GRAND TOTAL DI TABLE ORDER ITEMS
 
-// FUNGSI INI DI GUNAKAN UNTUK MEMFORMAT ANGKA NTUK MEMISAHKAN RIBUAN DAN DESIMAL DALAM FORMAT INDONESIA
-   function formatNumberInput(input) {
-    let value = input.value.replace(/\./g, '').replace(/[^,\d]/g, '');
-    let parts = value.split(',');
-    let intPart = parts[0];
-    let formatted = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-
-    if (parts.length > 1) {
-        formatted += ',' + parts[1].slice(0, 2); // Maksimal 2 angka desimal
-    }
-
-    input.value = formatted;
-}
-// FUNGSI INI DI GUNAKAN UNTUK MEMFORMAT ANGKA NTUK MEMISAHKAN RIBUAN DAN DESIMAL DALAM FORMAT INDONESIA
 
 // Fungsi ini dipanggil ketika pengguna memilih suatu opsi dari dropdown (select element) yang mewakili harga. Fungsi ini mengambil harga dari atribut data-harga di opsi yang dipilih dan mengisinya di field input harga yang terkait.
     function setHarga(select) {
@@ -2107,13 +2069,6 @@ function w3_close() {
         calculateRowTotal(row.querySelector('input[name="jumlah[]"]'));
     }
 // Fungsi ini dipanggil ketika pengguna memilih suatu opsi dari dropdown (select element) yang mewakili harga. Fungsi ini mengambil harga dari atribut data-harga di opsi yang dipilih dan mengisinya di field input harga yang terkait.
-
-// Fungsi ini berjalan ketika dokumen selesai dimuat, dan di sini ia menambahkan event listener untuk mendeteksi perubahan input di field "bayar", yang mungkin merupakan jumlah yang dibayar oleh pelanggan. Setiap kali ada perubahan dalam field ini, fungsi calculateKembali akan dipanggil untuk menghitung kembalian.
-    document.addEventListener("DOMContentLoaded", function () {
-    // Event listener for input change in the 'bayar' field
-    document.getElementById('bayar').addEventListener('input', calculateKembali);
-});
-// Fungsi ini berjalan ketika dokumen selesai dimuat, dan di sini ia menambahkan event listener untuk mendeteksi perubahan input di field "bayar", yang mungkin merupakan jumlah yang dibayar oleh pelanggan. Setiap kali ada perubahan dalam field ini, fungsi calculateKembali akan dipanggil untuk menghitung kembalian.
 
 
 
@@ -2130,16 +2085,19 @@ function validateForm() {
 
 //  FUNGSI INI DI GUNAKAN UNTUK MELANJUTKAN MEMBUKA MODAL NAMA DAN NO TELEPON KETIKA SUDAH TERISI SEMUA (TABEL)
 function togglePayButton() {
-    var jenispembayaran = document.getElementById('jenispembayaran').value;
+    var bayar = document.getElementById('bayar').value.trim(); // Ambil nilai bayar
     var buktitransaksi = document.getElementById('gambarUpload').files.length > 0;
     var orderItems = document.getElementById('orderItems');
     var payButton = document.getElementById('payButton');
 
-    console.log("Jenis Pembayaran:", jenispembayaran);  // Debugging
-    console.log("Bukti Transaksi:", buktitransaksi);   // Debugging
-    console.log("Jumlah item di tabel:", orderItems ? orderItems.rows.length : 0);  // Debugging
+    // Hilangkan format Rp dan konversi ke angka
+    var bayarValue = parseFloat(bayar.replace(/[^,\d]/g, '').replace(',', '.')) || 0;
 
-    if (jenispembayaran !== "" && buktitransaksi && orderItems && orderItems.rows.length > 1) {
+    console.log("Jumlah Bayar:", bayarValue); // Debugging
+    console.log("Bukti Transaksi:", buktitransaksi); // Debugging
+    console.log("Jumlah item di tabel:", orderItems ? orderItems.rows.length : 0); // Debugging
+
+    if (bayarValue > 0 && buktitransaksi && orderItems && orderItems.rows.length > 1) {
         payButton.disabled = false;
         payButton.style.opacity = "1";
         payButton.style.cursor = "pointer";
@@ -2149,6 +2107,7 @@ function togglePayButton() {
         payButton.style.cursor = "not-allowed";
     }
 }
+
 
 //  FUNGSI INI DI GUNAKAN UNTUK MELANJUTKAN MEMBUKA MODAL NAMA DAN NO TELEPON KETIKA SUDAH TERISI SEMUA (TABEL)
 
@@ -2381,6 +2340,72 @@ function previewFile() {
     }
 }
 // UNTUK BUKTI TRANSAKSI
+
+//UNTUK MENGISI KEMBALIAN SECARA OTOMATIS DAN FORMAT BAYAR
+function formatRupiah(angka) {
+    let number_string = angka.replace(/[^,\d]/g, '').toString(),
+        split = number_string.split(','),
+        sisa = split[0].length % 3,
+        rupiah = split[0].substr(0, sisa),
+        ribuan = split[0].substr(sisa).match(/\d{3}/gi);
+
+    if (ribuan) {
+        let separator = sisa ? '.' : '';
+        rupiah += separator + ribuan.join('.');
+    }
+
+    rupiah = split[1] !== undefined ? rupiah + ',' + split[1] : rupiah;
+    return rupiah;
+}
+
+// Fungsi untuk menghapus format rupiah agar bisa dihitung
+function removeFormatRupiah(angka) {
+    return angka.replace(/[^,\d]/g, '').replace(',', '.');
+}
+
+// Format otomatis saat user mengetik
+function formatInputBayar(input) {
+    let value = input.value;
+    let formattedValue = formatRupiah(value);
+    input.value = formattedValue;
+
+    // Hitung kembalian setelah format
+    hitungKembalian();
+}
+
+// Fungsi hitung kembalian
+function hitungKembalian() {
+    let bayarInput = document.getElementById('bayar');
+    let grandtotalInput = document.getElementById('grandtotal');
+    let kembalianInput = document.getElementById('kembalian');
+
+    if (!bayarInput || !grandtotalInput || !kembalianInput) {
+        console.error("Elemen input tidak ditemukan!");
+        return;
+    }
+
+    // Ambil nilai bayar & grandtotal tanpa format rupiah
+    let bayar = removeFormatRupiah(bayarInput.value);
+    let grandtotal = removeFormatRupiah(grandtotalInput.value);
+
+    bayar = parseFloat(bayar) || 0;
+    grandtotal = parseFloat(grandtotal) || 0;
+
+    let kembalian = bayar - grandtotal;
+
+    // Pastikan kembalian tidak negatif
+    if (kembalian < 0) {
+        kembalian = 0;
+    }
+
+    // Tampilkan hasil kembalian dalam format angka biasa (tanpa "Rp")
+    kembalianInput.value = kembalian.toLocaleString('id-ID', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    });
+}
+
+//UNTUK MENGISI KEMBALIAN SECARA OTOMATIS DAN FORMAT BAYAR
 </script>
 
 </body>
