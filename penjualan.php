@@ -1432,7 +1432,7 @@ function submitModalData() {
             <th>
                 <div style="display: flex; font-size: 14px;">
                 <div style="flex: 1; text-align: left;">
-                <span style="font-size: 16px; color: black; font-weight: bold;">NAMA BARANG</span><br><span
+                <span style="font-size: 16px; color: black; font-weight: bold;">NAMA</span><br><span
                     style="font-size: 16px; color: red; font-weight: bold;">HARGA</span>
                     <span style="font-size: 16px; color: green; font-weight: bold;">JUMLAH</span> <br>
                 </div>
@@ -1470,7 +1470,7 @@ function submitModalData() {
     </div>
 
     <div class="form-group">
-    <label for="bayar">BAYAR</label>
+    <label for="bayar">BAYAR:</label>
     <input type="text" id="bayar" name="bayar" class="form-control" oninput="formatInputBayar(this)" onchange="togglePayButton()">
     </div>
 
@@ -1511,6 +1511,15 @@ function submitModalData() {
 <!--                                    ======+    FORM UNTUK MENGIRIM DATA KE DATABSAE      +=====                  --> 
 <script> 
 /*                    ==============  SCRIPT UNTUK MODAL BARANG ATAU HALAMAN UTAMA -=========               */
+function w3_open() {
+            document.getElementById("mySidebar").classList.add("show");
+            document.getElementById("sidebarOverlay").classList.add("show");
+        }
+
+        function w3_close() {
+            document.getElementById("mySidebar").classList.remove("show");
+            document.getElementById("sidebarOverlay").classList.remove("show");
+        }
 function openBarangModal() {
     document.getElementById('barangModal').style.display = 'block';
     localStorage.setItem('modalState', 'open'); // Save modal state as 'open' in localStorage
@@ -2089,15 +2098,19 @@ function togglePayButton() {
     var buktitransaksi = document.getElementById('gambarUpload').files.length > 0;
     var orderItems = document.getElementById('orderItems');
     var payButton = document.getElementById('payButton');
+    var grandtotalInput = document.getElementById('grandtotal');
 
     // Hilangkan format Rp dan konversi ke angka
     var bayarValue = parseFloat(bayar.replace(/[^,\d]/g, '').replace(',', '.')) || 0;
+    var grandtotalValue = parseFloat(grandtotalInput.value.replace(/[^,\d]/g, '').replace(',', '.')) || 0;
 
     console.log("Jumlah Bayar:", bayarValue); // Debugging
+    console.log("Grand Total:", grandtotalValue); // Debugging
     console.log("Bukti Transaksi:", buktitransaksi); // Debugging
     console.log("Jumlah item di tabel:", orderItems ? orderItems.rows.length : 0); // Debugging
 
-    if (bayarValue > 0 && buktitransaksi && orderItems && orderItems.rows.length > 1) {
+    // Cek apakah bayar >= grandtotal, ada bukti transaksi, dan ada item di tabel
+    if (bayarValue >= grandtotalValue && buktitransaksi && orderItems && orderItems.rows.length > 1) {
         payButton.disabled = false;
         payButton.style.opacity = "1";
         payButton.style.cursor = "pointer";
@@ -2107,7 +2120,6 @@ function togglePayButton() {
         payButton.style.cursor = "not-allowed";
     }
 }
-
 
 //  FUNGSI INI DI GUNAKAN UNTUK MELANJUTKAN MEMBUKA MODAL NAMA DAN NO TELEPON KETIKA SUDAH TERISI SEMUA (TABEL)
 
