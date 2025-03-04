@@ -37,9 +37,14 @@ $stok = $row_stok['stok']; // Store the current stock
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['action'] == 'update') {
     $stok = mysqli_real_escape_string($conn, $_POST['stok']);
-    $folder_gambar = 'gambar/stok/';
+    $folder_gambar = __DIR__ . '/gambar/stok/'; // Gunakan path absolut
     $allowed_extensions = ['jpg', 'jpeg', 'png', 'gif']; // Ekstensi gambar yang diperbolehkan
     $pesan_error = "";
+
+    // Pastikan direktori ada, jika tidak, buat direktori
+    if (!is_dir($folder_gambar)) {
+        mkdir($folder_gambar, 0755, true); // Buat direktori dengan izin 755
+    }
 
     if (isset($_FILES['gambar']) && $_FILES['gambar']['error'] == 0) {
         // Dapatkan informasi file gambar yang di-upload
@@ -54,8 +59,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
                 unlink($gambar_lama[0]); // Hapus gambar lama
             }
 
-            // Simpan gambar baru dengan nama sesuai idmenu
-            $gambar_baru = $folder_gambar . $idmenu . '_' . date('Ymd') . '.' . $extension;
+            // Format nama file baru: idmenu_jumlahstok_jam-menit-detik_tanggalbulantahun
+            $waktu = date('H-i-s_dmY'); // Ganti : dengan -
+            $nama_file_baru = $idmenu . '_' . $stok . '_' . $waktu . '.' . $extension;
+
+            // Simpan gambar baru dengan nama yang telah diformat
+            $gambar_baru = $folder_gambar . $nama_file_baru;
             if (move_uploaded_file($_FILES['gambar']['tmp_name'], $gambar_baru)) {
                 // Update stok dalam database
                 $update_query = "UPDATE menu SET stok = '$stok' WHERE idmenu = '$idmenu'";
@@ -244,7 +253,7 @@ mysqli_close($conn);
     if (!$image_displayed) {
         echo "<img id='previewImage' src='' alt='Preview Gambar Baru' 
               style='max-width: 200px; height: auto; display: none; margin-bottom: 10px;'>";
-        echo "<div style='text-align: center;'>Gambar tidak tersedia.</div>";
+        echo "<div style='text-align: center;'> Harap unggah bukti stok!</div>";
     }
     ?>
 </div><br>

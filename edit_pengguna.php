@@ -181,6 +181,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <a href="list_menu.php" class="w3-bar-item w3-button w3-border w3-hover-teal">
         <i class="fas fa-utensils"></i> <span class="menu-text">List Menu</span>
     </a>
+    <?php if ($_SESSION['username'] == 'admin') { ?>
+    <a href="history_stok.php" class="w3-bar-item w3-button w3-border w3-hover-green">
+        <i class="fas fa-history"></i> <span class="menu-text">History Stok</span>
+    </a>
+    <?php } ?>
     <a href="list_penjualan.php" class="w3-bar-item w3-button w3-border w3-hover-teal">
         <i class="fas fa-clipboard-list"></i> <span class="menu-text">List Penjualan</span>
     </a>
