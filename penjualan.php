@@ -29,6 +29,7 @@ function generate_penjualan_id($conn) {
 
 $new_penjualan_id = generate_penjualan_id($conn);
 $now = date('Y-m-d H:i:s');
+$today = date('Y-m-d\TH:i');
 
 // Hitung total item untuk kategori Makanan (hanya stok > 0)
 $sql_count_makanan = "SELECT COUNT(*) AS total FROM menu WHERE jenis = 'Makanan' 
@@ -1640,6 +1641,7 @@ function addSelectedItemToOrder() {
     var harga = parseFloat(document.getElementById('productTotalPrice').getAttribute('data-price').replace('.', '').replace(',', '.')); // Harga per item
     var jumlah = parseInt(document.querySelector('.quantity-input').value) || 1; // Jumlah item
     var total = harga * jumlah; // Total harga untuk item tersebut
+    var imageUrl = document.getElementById('productImage') ? document.getElementById('productImage').src : 'default-image.jpg'; // Ambil URL gambar
 
     // Referensi ke tbody orderItems
     var orderItems = document.getElementById('orderItems');
@@ -1687,6 +1689,9 @@ function addSelectedItemToOrder() {
                 <div class="order-row">
                     <div class="item-details">
                         <div class="top-row">
+                            <!-- Gambar produk -->
+                            <img src="${imageUrl}" alt="${namamenu}" style="width: 50px; height: 50px; object-fit: cover; margin-right: 10px;">
+                            
                             <!-- Nama Item dengan Kuantitas -->
                             <span class="item-title" style="font-weight: bold;">
                                 (${jumlah}x) ${namamenu}
@@ -1737,6 +1742,7 @@ function addSelectedItemToOrder() {
     // Tutup modal setelah menambahkan item ke form
     closeProductModal();
 }
+
 //          #####   FUNGSI UNTUK MENAMPILKAN DATA BARANG HARGA JUMLAH DAN TOTAL DAN DI KIRIM KE DATABASE     ######
 
 //                 ======       FUNGSI UNTUK MENAMBAH BARANG DAN MENGUANGI BARANG DI TABLE  ======
@@ -1980,7 +1986,7 @@ function updateTotal() {
     });
 
     // Logging the total items and total price for debugging
-    console.log('Jumlah total barang:', totalItems);
+    console.log('Jumlah total :', totalItems);
     console.log('Total harga:', totalPrice);
 
     // Update total section
@@ -2027,24 +2033,29 @@ function calculateRowTotal(input) {
 function updateGrandTotal() {
     let total = 0;
 
-    // Ambil semua input dengan name 'total[]'
+    // Select all input elements with the name 'total[]'
     const totalElements = document.querySelectorAll('input[name="total[]"]');
 
+    // Check if there are any 'total' elements left
     if (totalElements.length > 0) {
+        // Loop through each element and add up the total
         totalElements.forEach(function (element) {
-            // Ambil nilai dan konversi ke angka, hilangkan format ribuan dan ubah koma menjadi titik
+            // Convert the value from text format to a number
             let value = parseFloat(element.value.replace(/\./g, '').replace(',', '.'));
             if (!isNaN(value)) {
                 total += value;
             }
         });
+
+        // Format the total into Indonesian currency format
+        let formattedTotal =  total.toLocaleString('id-ID');
+
+        // Display the grand total in the input field
+        document.getElementById('grandtotal').value = formattedTotal;
+    } else {
+        // If no 'total' elements remain, set the grand total to 0
+        document.getElementById('grandtotal').value = 'Rp 0';
     }
-
-    // Format total tanpa desimal dan tanpa "Rp"
-    let formattedTotal = total.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-
-    // Tampilkan di input grandtotal
-    document.getElementById('grandtotal').value = formattedTotal || '0';
 }
 // FUNGSI INI DI GUNAKAN UNTUK MENGHITUNG TOTAL KESELURUHAN DARI SEMUA ELEMEN INPUT YANG MEMILIKI NAMA TOTAL[] DI MODAL CART
 
@@ -2055,29 +2066,16 @@ function calculateTotal() {
     var grandTotal = 0;
 
     totalInputs.forEach(function(totalInput) {
-        // Bersihkan format angka sebelum perhitungan
+        // Pastikan untuk membersihkan format angka sebelum melakukan perhitungan
         var rowTotal = parseFloat(totalInput.value.replace(/\./g, '').replace(',', '.')) || 0;
         grandTotal += rowTotal;
     });
 
-    // Format angka tanpa "Rp"
-    document.getElementById('grandtotal').value = grandTotal.toLocaleString('id-ID', { 
-        minimumFractionDigits: 0, 
-        maximumFractionDigits: 0 
-    });
+    // Tampilkan nilai grand total
+    document.getElementById('grandtotal').value =  grandTotal.toLocaleString('id-ID');
 }
 // FUNGSI INI DI GUNAKAN UNTUK MENGHITUNG GRAND TOTAL DI TABLE ORDER ITEMS
 
-
-// Fungsi ini dipanggil ketika pengguna memilih suatu opsi dari dropdown (select element) yang mewakili harga. Fungsi ini mengambil harga dari atribut data-harga di opsi yang dipilih dan mengisinya di field input harga yang terkait.
-    function setHarga(select) {
-        var harga = select.options[select.selectedIndex].getAttribute('data-harga');
-        var row = select.closest('tr');
-        var hargaFormatted = new Intl.NumberFormat('de-DE').format(harga);
-        row.querySelector('input[name="harga[]"]').value = hargaFormatted;
-        calculateRowTotal(row.querySelector('input[name="jumlah[]"]'));
-    }
-// Fungsi ini dipanggil ketika pengguna memilih suatu opsi dari dropdown (select element) yang mewakili harga. Fungsi ini mengambil harga dari atribut data-harga di opsi yang dipilih dan mengisinya di field input harga yang terkait.
 
 
 
@@ -2091,58 +2089,6 @@ function validateForm() {
     }
 }
 // FUNGSI INI DI GUNAKAN UNTUK MELANJUTKAN MENGIRIMKAN DETA KETIKA NAMA DAN NO TELEPON TERISI 
-
-//  FUNGSI INI DI GUNAKAN UNTUK MELANJUTKAN MEMBUKA MODAL NAMA DAN NO TELEPON KETIKA SUDAH TERISI SEMUA (TABEL)
-function togglePayButton() {
-    var bayar = document.getElementById('bayar').value.trim(); // Ambil nilai bayar
-    var buktitransaksi = document.getElementById('gambarUpload').files.length > 0;
-    var orderItems = document.getElementById('orderItems');
-    var payButton = document.getElementById('payButton');
-    var grandtotalInput = document.getElementById('grandtotal');
-
-    // Hilangkan format Rp dan konversi ke angka
-    var bayarValue = parseFloat(bayar.replace(/[^,\d]/g, '').replace(',', '.')) || 0;
-    var grandtotalValue = parseFloat(grandtotalInput.value.replace(/[^,\d]/g, '').replace(',', '.')) || 0;
-
-    console.log("Jumlah Bayar:", bayarValue); // Debugging
-    console.log("Grand Total:", grandtotalValue); // Debugging
-    console.log("Bukti Transaksi:", buktitransaksi); // Debugging
-    console.log("Jumlah item di tabel:", orderItems ? orderItems.rows.length : 0); // Debugging
-
-    // Cek apakah bayar >= grandtotal, ada bukti transaksi, dan ada item di tabel
-    if (bayarValue >= grandtotalValue && buktitransaksi && orderItems && orderItems.rows.length > 1) {
-        payButton.disabled = false;
-        payButton.style.opacity = "1";
-        payButton.style.cursor = "pointer";
-    } else {
-        payButton.disabled = true;
-        payButton.style.opacity = "0.5";
-        payButton.style.cursor = "not-allowed";
-    }
-}
-
-//  FUNGSI INI DI GUNAKAN UNTUK MELANJUTKAN MEMBUKA MODAL NAMA DAN NO TELEPON KETIKA SUDAH TERISI SEMUA (TABEL)
-
-// FUNGSI INI DI GUNAKAN UNTUK TANGGAL DAN WAKTU
-    document.addEventListener('DOMContentLoaded', function () {
-            const datetimeInput = document.getElementById('tanggal');
-
-            function formatDateTime() {
-                const now = new Date();
-                const year = now.getFullYear();
-                const month = String(now.getMonth() + 1).padStart(2, '0'); // Bulan adalah basis nol
-                const day = String(now.getDate()).padStart(2, '0');
-                const hours = String(now.getHours()).padStart(2, '0');
-                const minutes = String(now.getMinutes()).padStart(2, '0');
-
-                return `${year}-${month}-${day}T${hours}:${minutes}`;
-            }
-
-            // Set nilai dan atribut min dari input ke tanggal dan waktu saat ini
-            const now = formatDateTime();
-            datetimeInput.value = now; // Set nilai input ke tanggal dan waktu saat ini
-            datetimeInput.min = now; // Set nilai minimum yang diizinkan ke tanggal dan waktu saat ini
-        });
 
 function openCartModal() {
         console.log('Mencoba membuka modal keranjang...');
@@ -2168,16 +2114,16 @@ window.onclick = function(event) {
     }
 }
 
-// FUNGSI UNTUK MENAMPILKAN BARANG, HARGA, DAN JUMLAH DI MODAL KERANJANG
+// FUNGSI UNTUK MENAMPILKAN BARANG HARGA DAN JUMLAH DI MODAL KERANJANG
 function updateCartModal() {
     const cart = JSON.parse(localStorage.getItem('cart')) || [];
     const cartItemsContainer = document.getElementById('cartItemsContainer');
     const cartTotalItems = document.getElementById('cart-total-items'); // Total barang di footer
     const cartTotalHeaderItems = document.getElementById('cart-total-header-items'); // Total barang di header
     const cartTotalPrice = document.getElementById('cart-total-price');
-    const checkoutButton = document.querySelector('.cart-checkout-button'); // Tombol Bayar
+    const checkoutButton = document.querySelector('.cart-checkout-button'); // Ambil tombol Bayar
 
-    cartItemsContainer.innerHTML = ''; // Kosongkan isi modal keranjang
+    cartItemsContainer.innerHTML = ''; // Clear existing items
     let totalItems = 0;
     let totalPrice = 0;
 
@@ -2189,7 +2135,6 @@ function updateCartModal() {
         // Jika ada barang, aktifkan tombol Bayar
         checkoutButton.disabled = false;
         checkoutButton.classList.remove('disabled');
-
         cart.forEach(item => {
             const cartItemCard = document.createElement('div');
             cartItemCard.classList.add('cart-item-card');
@@ -2219,20 +2164,21 @@ function updateCartModal() {
         });
     }
 
-    // Update jumlah barang unik di footer dan header modal
-    const totalUniqueItems = cart.length;
+    // Update jumlah barang unik (bukan jumlah item) di footer dan header modal
+    const totalUniqueItems = cart.length;  // Jumlah barang unik
+
     cartTotalItems.textContent = totalUniqueItems;
     cartTotalHeaderItems.textContent = totalUniqueItems;
 
-    // Update total harga dalam format IDR
+    // Update total price tanpa desimal
     cartTotalPrice.textContent = `Rp ${totalPrice.toLocaleString('id-ID')}`;
 
-    // Perbarui grand total setelah update
+    // Panggil calculateTotal untuk memperbarui grand total setelah keranjang diperbarui
     calculateTotal();
 }
-// FUNGSI UNTUK MENAMPILKAN BARANG, HARGA, DAN JUMLAH DI MODAL KERANJANG
 
-// FUNGSI UNTUK MENAMBAH DAN MENGURANGI JUMLAH BARANG DI MODAL KERANJANG
+
+// FUNGSI UNTUK MENAMBAHKAN JUMLAH DAN MENGURANGI JUMLAH BARANG DI MODAL KERANJANG
 function decreaseQuantity(itemTitle) {
     let cart = JSON.parse(localStorage.getItem('cart')) || [];
     const itemIndex = cart.findIndex(item => item.title === itemTitle);
@@ -2241,11 +2187,11 @@ function decreaseQuantity(itemTitle) {
         if (cart[itemIndex].quantity > 1) {
             cart[itemIndex].quantity -= 1;
         } else {
-            cart[itemIndex].quantity = 1; // Tetapkan tetap 1 jika sudah minimum
+            cart[itemIndex].quantity = 1;
         }
-
         localStorage.setItem('cart', JSON.stringify(cart));
         updateCartModal();
+        updateTotal();
         updateOrderTable(itemTitle, cart[itemIndex].quantity);
         calculateTotal();
     }
@@ -2254,56 +2200,88 @@ function decreaseQuantity(itemTitle) {
 function increaseQuantity(itemTitle) {
     let cart = JSON.parse(localStorage.getItem('cart')) || [];
     const itemIndex = cart.findIndex(item => item.title === itemTitle);
-
+    
     if (itemIndex > -1) {
         cart[itemIndex].quantity += 1;
         localStorage.setItem('cart', JSON.stringify(cart));
-
         updateCartModal();
+        updateTotal();
         updateOrderTable(itemTitle, cart[itemIndex].quantity);
         calculateTotal();
     }
 }
-// FUNGSI UNTUK MENAMBAH DAN MENGURANGI JUMLAH BARANG DI MODAL KERANJANG
+//UNTUK MENGUPDATE PERUBAHAN KE FROM
+function updateOrderTable(itemTitle, newQuantity) {
+    const orderItems = document.getElementById('orderItems');
+    const existingRow = Array.from(orderItems.rows).find(row => {
+        return row.querySelector('.item-title') && row.querySelector('.item-title').textContent.includes(itemTitle);
+    });
 
+    // Ambil harga dari cart untuk perhitungan total
+    const cart = JSON.parse(localStorage.getItem('cart')) || [];
+    const itemInCart = cart.find(item => item.title === itemTitle);
+    const price = itemInCart ? itemInCart.price : 0;
 
-// FUNGSI INI UNTUK MENGHAPUS DI TABEL
+    if (existingRow) {
+        if (newQuantity > 0) {
+            // Perbarui kuantitas dan total
+            const quantityInput = existingRow.querySelector('.quantity-input');
+            const totalInput = existingRow.querySelector('.total-input');
+
+            // Perbarui kuantitas
+            quantityInput.value = newQuantity;
+
+            // Perbarui total
+            const newTotal = price * newQuantity;
+            totalInput.value = newTotal.toLocaleString('id-ID'); // Format tanpa desimal
+
+            // Update judul item dengan kuantitas baru
+            const itemTitleElement = existingRow.querySelector('.item-title');
+            itemTitleElement.textContent = `(${newQuantity}x) ${itemTitle}`;
+
+        } else {
+            // Jika kuantitas 0, hapus baris
+            removeOrderRow(itemTitle);
+        }
+    } else if (newQuantity > 0) {
+        // Jika baris tidak ditemukan, tambahkan baris baru
+        const newRow = orderItems.insertRow();
+        const total = price * newQuantity; // Total untuk baris baru
+        newRow.innerHTML = `
+            <td class="item-title">${itemTitle}</td>
+            <td><input class="quantity-input" type="number" value="${newQuantity}" readonly /></td>
+            <td class="price-input">${price.toLocaleString('id-ID')}</td>
+            <td><input class="total-input" value="${total.toLocaleString('id-ID')}" readonly /></td>
+        `;
+    }
+}
+//UNTUK MENGUPDATE PERUBAHAN KE FROM
+
 function removeOrderRow(itemTitle) {
     const orderItems = document.getElementById('orderItems');
     const existingRow = Array.from(orderItems.rows).find(row => {
         return row.querySelector('.item-title') && row.querySelector('.item-title').textContent.trim() === itemTitle;
     });
-
     if (existingRow) {
         existingRow.remove();
     }
-    
-    // Setelah penghapusan, perbarui total keseluruhan
     updateTotal();
 }
 
-//  FUNGSI INI UNTUK MENGHAPUS DATA BARANG DI MODAL KERANJANG BESERTA DITABEL
+// FUNGSI INI UNTUK MENGHAPUS DATA BARANG DI MODAL KERANJANG BESERTA DI TABEL
 function removeFromCart(itemTitle) {
-    // Hapus dari localStorage
     let cart = JSON.parse(localStorage.getItem('cart')) || [];
     cart = cart.filter(item => item.title !== itemTitle);
     localStorage.setItem('cart', JSON.stringify(cart));
-
-    // Perbarui modal keranjang
     updateCartModal();
-    
-    // Perbarui total di container
     updateTotal();
-    
-    // Hapus item dari tabel pesanan
     removeOrderRow(itemTitle);
-    
-    // Cari tombol di tabel dan tekan tombol 'Hapus' jika ada
     const tableButton = document.querySelector(`button[onclick*="handleRemoveItem('${itemTitle}'"]`);
     if (tableButton) {
         handleRemoveItem(itemTitle, tableButton);
     }
 }
+
 //  FUNGSI INI UNTUK MENGHAPUS DATA BARANG DI MODAL KERANJANG BESERTA DITABEL
 
 // FUNGSI INI DI GUNAKAN UNTUK CLOSE SEMUA MODAL
@@ -2418,6 +2396,59 @@ function hitungKembalian() {
 }
 
 //UNTUK MENGISI KEMBALIAN SECARA OTOMATIS DAN FORMAT BAYAR
+
+//  FUNGSI INI DI GUNAKAN UNTUK MELANJUTKAN MEMBUKA MODAL NAMA DAN NO TELEPON KETIKA SUDAH TERISI SEMUA (TABEL)
+function togglePayButton() {
+    var bayar = document.getElementById('bayar').value.trim(); // Ambil nilai bayar
+    var buktitransaksi = document.getElementById('gambarUpload').files.length > 0;
+    var orderItems = document.getElementById('orderItems');
+    var payButton = document.getElementById('payButton');
+    var grandtotalInput = document.getElementById('grandtotal');
+
+    // Hilangkan format Rp dan konversi ke angka
+    var bayarValue = parseFloat(bayar.replace(/[^,\d]/g, '').replace(',', '.')) || 0;
+    var grandtotalValue = parseFloat(grandtotalInput.value.replace(/[^,\d]/g, '').replace(',', '.')) || 0;
+
+    console.log("Jumlah Bayar:", bayarValue); // Debugging
+    console.log("Grand Total:", grandtotalValue); // Debugging
+    console.log("Bukti Transaksi:", buktitransaksi); // Debugging
+    console.log("Jumlah item di tabel:", orderItems ? orderItems.rows.length : 0); // Debugging
+
+    // Cek apakah bayar >= grandtotal, ada bukti transaksi, dan ada item di tabel
+    if (bayarValue >= grandtotalValue && buktitransaksi && orderItems && orderItems.rows.length > 1) {
+        payButton.disabled = false;
+        payButton.style.opacity = "1";
+        payButton.style.cursor = "pointer";
+    } else {
+        payButton.disabled = true;
+        payButton.style.opacity = "0.5";
+        payButton.style.cursor = "not-allowed";
+    }
+}
+
+//  FUNGSI INI DI GUNAKAN UNTUK MELANJUTKAN MEMBUKA MODAL NAMA DAN NO TELEPON KETIKA SUDAH TERISI SEMUA (TABEL)
+
+// FUNGSI INI DI GUNAKAN UNTUK TANGGAL DAN WAKTU
+document.addEventListener('DOMContentLoaded', function () {
+            const datetimeInput = document.getElementById('tanggal');
+
+            function formatDateTime() {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0'); // Bulan adalah basis nol
+                const day = String(now.getDate()).padStart(2, '0');
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+
+                return `${year}-${month}-${day}T${hours}:${minutes}`;
+            }
+
+            // Set nilai dan atribut min dari input ke tanggal dan waktu saat ini
+            const now = formatDateTime();
+            datetimeInput.value = now; // Set nilai input ke tanggal dan waktu saat ini
+            datetimeInput.min = now; // Set nilai minimum yang diizinkan ke tanggal dan waktu saat ini
+        });
+
 </script>
 
 </body>
