@@ -511,6 +511,8 @@ var htmlContent = `
         <p><strong>No Nota:</strong> ${orderData.penjualan.idpenjualan}</p>
         <p><strong>Tanggal:</strong> ${orderData.penjualan.tanggal}</p>
         <p><strong>Nama:</strong> ${orderData.penjualan.nama}</p>
+        <p><strong>Bayar:</strong> ${parseFloat(orderData.penjualan.bayar).toLocaleString('id-ID', { minimumFractionDigits: 0, style: 'currency', currency: 'IDR' })}</p>
+        <p><strong>Kembalian:</strong> ${parseFloat(orderData.penjualan.kembalian).toLocaleString('id-ID', { minimumFractionDigits: 0, style: 'currency', currency: 'IDR' })}</p>
     </div>
 
     <h3>Detail Penjualan</h3>
