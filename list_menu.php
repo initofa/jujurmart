@@ -102,7 +102,7 @@ $offset = ($page - 1) * $records_per_page;
 
 // Retrieve items with pagination, search, and filtering by userrecord if not admin
 if ($username === 'admin') {
-    $sql = "SELECT idmenu, nama,gambar, jenis, stok, harga
+    $sql = "SELECT idmenu, nama,gambar, jenis, stok, harga ,userrecord
             FROM menu
             WHERE (nama LIKE '%$search_keyword%' 
                    OR jenis LIKE '%$search_keyword%')
@@ -332,7 +332,10 @@ if ($totalResult) {
                         <span style="font-size: 15px; font-weight: bold;">STOK</span> <br>
                     </div>
                     <div style="flex: 1; text-align: center; margin-right: 5%">
-                        <br> <span style="font-size: 15px; font-weight: bold;">HARGA</span>
+                        <br> <span style="font-size: 15px; font-weight: bold;">HARGA</span> <br>
+                        <?php if ($_SESSION['username'] == 'admin') { ?>
+                        <span style="font-size: 15px; font-weight: bold;">PENJUAL</span>
+                        <?php } ?>
                     </div>
                     <div style="flex: 1; text-align: center;">
                         <br> <span style="font-size: 15px; font-weight: bold;">GAMBAR</span>
@@ -376,14 +379,17 @@ if ($totalResult) {
                             <span class="w3-text-red"><?php echo htmlspecialchars($row['idmenu']); ?></span>
                            <span class="w3-text-amber"><?php echo htmlspecialchars($row['jenis']); ?></span> <br>
                             <span
-                                style="font-size: 20px; font-weight: bold;"><?php echo htmlspecialchars($row['nama']); ?></span>
+                                style="font-size: 18px; font-weight: bold;"><?php echo htmlspecialchars($row['nama']); ?></span>
                             <br>
-                            <span style="font-size: 15px; font-weight: bold;">
+                            <span style="font-size: 16px; font-weight: bold;">
                                 <?php echo ($row['stok'] > 0) ? $row['stok'] : '<span class="w3-text-red">Stok Habis</span>'; ?>
                             </span>
                         </td>
                         <td style="font-size: 14px; text-align: center; width: 25%">
-                            <br>Rp <?php echo number_format($row['harga'], 0, ',', '.'); ?>
+                            <br><span>Rp <?php echo number_format($row['harga'], 0, ',', '.'); ?></span> <br>
+                            <?php if ($_SESSION['username'] == 'admin') { ?>
+                            <span style="font-size: 14px; font-weight: bold;"><?php echo htmlspecialchars($row['userrecord']); ?></span>
+                            <?php } ?>
                         </td>
                         <td style="font-size: 14px; text-align: center; width: 30%">
     <?php
