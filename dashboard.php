@@ -481,39 +481,56 @@ foreach ($penjualan_data as $data) {
     </table>
 </div>
 
+<?php
+// Mengelompokkan data berdasarkan menu_name
+$grouped_data = [];
+
+foreach ($penjualan_data as $data) {
+    $tanggal = date('d-m-Y', strtotime($data['tanggal']));
+    $menu = $data['menu_name'];
+
+    if (!isset($grouped_data[$tanggal][$menu])) {
+        $grouped_data[$tanggal][$menu] = [
+            'jumlah_terjual' => 0,
+            'total_pendapatan' => 0
+        ];
+    }
+
+    // Menjumlahkan jumlah terjual dan total pendapatan
+    $grouped_data[$tanggal][$menu]['jumlah_terjual'] += $data['jumlah_terjual'];
+    $grouped_data[$tanggal][$menu]['total_pendapatan'] += $data['total_pendapatan'];
+}
+?>
+
 <!-- Table for Detail Per Tanggal -->
 <div class="table-container" id="detilTableContainer" style="display: none;">
     <div class="dropdown-container">
-    <select id="tanggalSelect" class="w3-button w3-black w3-center" onchange="updateTable()">
-    <option value="">Pilih Tanggal</option>
-    <?php
-    $tanggal_tercatat = [];
-    foreach ($penjualan_data as $data) {
-        $timestamp = strtotime($data['tanggal']);
-        $tgl = date('d-m-Y', $timestamp);
-        $hari = date('l', $timestamp);
+        <select id="tanggalSelect" class="w3-button w3-black w3-center" onchange="updateTable()">
+            <option value="">Pilih Tanggal</option>
+            <?php
+            $tanggal_tercatat = [];
+            foreach (array_keys($grouped_data) as $tgl) {
+                $timestamp = strtotime(str_replace('-', '/', $tgl));
+                $hari = date('l', $timestamp);
 
-        $nama_hari = [
-            'Sunday' => 'Minggu', 'Monday' => 'Senin', 'Tuesday' => 'Selasa',
-            'Wednesday' => 'Rabu', 'Thursday' => 'Kamis', 'Friday' => 'Jumat', 'Saturday' => 'Sabtu'
-        ];
-        $hari_id = $nama_hari[$hari];
+                $nama_hari = [
+                    'Sunday' => 'Minggu', 'Monday' => 'Senin', 'Tuesday' => 'Selasa',
+                    'Wednesday' => 'Rabu', 'Thursday' => 'Kamis', 'Friday' => 'Jumat', 'Saturday' => 'Sabtu'
+                ];
+                $hari_id = $nama_hari[$hari];
 
-        if (!in_array($tgl, $tanggal_tercatat)) {
-            $tanggal_tercatat[] = $tgl;
-            echo "<option value='$tgl'>$tgl - $hari_id</option>";
-        }
-    }
-    ?>
-</select>
+                echo "<option value='$tgl'>$tgl - $hari_id</option>";
+            }
+            ?>
+        </select>
     </div>
 
     <h3 class="w3-center"><b>Detail Data Penjualan Per Hari</b></h3>
-    
+
     <div class="info-box">
-    <p><strong>Tanggal:</strong> <span id="infoTanggal">-</span></p>
-    <p><strong>Jumlah Penjualan:</strong> <span id="infoJumlah">0</span></p>
-    <p><strong>Total (Rp):</strong> <span id="infoTotalRp">Rp 0</span></p>
+        <p><strong>Tanggal:</strong> <span id="infoTanggal">-</span></p>
+        <p><strong>Jumlah Penjualan:</strong> <span id="infoJumlah">0</span></p>
+        <p><strong>Total (Rp):</strong> <span id="infoTotalRp">Rp 0</span></p>
     </div>
 
     <table class="w3-table-all w3-card-4" id="detailTable">
@@ -525,15 +542,14 @@ foreach ($penjualan_data as $data) {
             </tr>
         </thead>
         <tbody id="detilTableBody">
-            <?php foreach ($penjualan_data as $data) { 
-                $tanggal = date('d-m-Y', strtotime($data['tanggal']));
-            ?>
-                <tr class="data-row" data-tanggal="<?= $tanggal; ?>" style="display: none;">
-                    <td style="text-align:center;"><?= $data['menu_name']; ?></td>
-                    <td style="text-align:center;"><?= number_format($data['jumlah_terjual'], 0, ',', '.'); ?></td>
-                    <td style="text-align:center;">Rp <?= number_format($data['total_pendapatan'], 0, ',', '.'); ?></td>
-                </tr>
-            <?php } ?>
+            <?php foreach ($grouped_data as $tanggal => $menus) { 
+                foreach ($menus as $menu => $info) { ?>
+                    <tr class="data-row" data-tanggal="<?= $tanggal; ?>" style="display: none;">
+                        <td style="text-align:center;"><?= $menu; ?></td>
+                        <td style="text-align:center;"><?= number_format($info['jumlah_terjual'], 0, ',', '.'); ?></td>
+                        <td style="text-align:center;">Rp <?= number_format($info['total_pendapatan'], 0, ',', '.'); ?></td>
+                    </tr>
+            <?php } } ?>
         </tbody>
     </table>
 </div>
