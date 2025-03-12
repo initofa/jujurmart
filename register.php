@@ -2,7 +2,7 @@
 include 'koneksi.php';
 session_start();
 if (isset($_SESSION['username'])) {
-    echo "<script> window.location.href='list_menu.php' </script>";
+    echo "<script> window.location.href='dashboard.php' </script>";
     exit();
 }
 
@@ -115,7 +115,7 @@ $conn->close();
 <body>
     <br>
     <div class="w3-center">
-    <img src="jujurmart.png" alt="Logo" style="vertical-align: middle; width: 100px;">
+    <img src="jujurmart.png" alt="Logo" style="vertical-align: middle; width: 140px;">
         <h2 class="w3-container w3-center" style="font-family: 'Arial', sans-serif; color: #333; font-weight: bold;">
         </h2>
     </div>

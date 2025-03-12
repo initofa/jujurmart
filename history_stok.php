@@ -10,6 +10,12 @@ if (!isset($_SESSION["username"])) {
 
 $username = $_SESSION["username"];
 
+// Pastikan hanya admin yang bisa mengakses halaman ini
+if ($_SESSION['username'] != 'admin') {
+    header('Location: dashboard.php'); // Redirect jika pengguna bukan admin
+    exit;
+}
+
 // Ambil data dari tabel menu untuk dropdown
 $query_menu = "SELECT idmenu, nama FROM menu ORDER BY idmenu DESC";
 $result_menu = mysqli_query($conn, $query_menu);
@@ -186,19 +192,19 @@ if (isset($_GET['idmenu'])) {
 <button onclick="w3_close()" class="w3-bar-item w3-button w3-red w3-center close-button">
 <b>Close</b> <i class="fa fa-close" style="font-size:20px; margin-left:5px;"></i>
 </button>
+<a href="dashboard.php" class="w3-bar-item w3-button w3-border w3-hover-green">
+    <i class="fas fa-chart-bar"></i> <span class="menu-text">Dashboard</span>
+</a>
 <a href="list_menu.php" class="w3-bar-item w3-button w3-border w3-hover-green">
     <i class="fas fa-utensils"></i> <span class="menu-text">List Menu</span>
 </a>
 <?php if ($_SESSION['username'] == 'admin') { ?>
-    <a href="#" class="w3-bar-item w3-button w3-border w3-hover-green">
-        <i class="fas fa-history"></i> <span class="menu-text">History Stok</span>
-    </a>
+<a href="#" class="w3-bar-item w3-button w3-border w3-hover-green">
+    <i class="fas fa-history"></i> <span class="menu-text">History Stok</span>
+</a>
 <?php } ?>
 <a href="list_penjualan.php" class="w3-bar-item w3-button w3-border w3-hover-green">
     <i class="fas fa-clipboard-list"></i> <span class="menu-text">List Penjualan</span>
-</a>
-<a href="dashboard.php" class="w3-bar-item w3-button w3-border w3-hover-green">
-    <i class="fas fa-chart-bar"></i> <span class="menu-text">Dashboard</span>
 </a>
 <?php if ($_SESSION['username'] == 'admin') { ?>
     <a href="list_pengguna.php" class="w3-bar-item w3-button w3-border w3-hover-green">

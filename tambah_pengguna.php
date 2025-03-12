@@ -1,12 +1,20 @@
 <?php
-include 'koneksi.php';
-session_start();
+include 'koneksi.php'; // Sertakan file koneksi ke database
+session_start(); // Mulai sesi untuk mengakses informasi sesi pengguna
 
-if (!isset($_SESSION["username"])) {
-    header('Location: index.php');
+// Pastikan pengguna telah login sebelumnya
+if (!isset($_SESSION['username'])) {
+    header('Location: index.php'); // Redirect jika pengguna belum login
     exit;
 }
 
+// Pastikan hanya admin yang bisa mengakses halaman ini
+if ($_SESSION['username'] != 'admin') {
+    header('Location: dashboard.php'); // Redirect jika pengguna bukan admin
+    exit;
+}
+
+// Proses penambahan pengguna jika metode request adalah POST
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $username = $_POST['username'];
     $nama = $_POST['nama'];
@@ -126,6 +134,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <button onclick="w3_close()" class="w3-bar-item w3-button w3-red w3-center close-button">
     <b>Close</b> <i class="fa fa-close" style="font-size:20px; margin-left:5px;"></i>
 </button>
+    <a href="dashboard.php" class="w3-bar-item w3-button w3-border w3-hover-green">
+        <i class="fas fa-chart-bar"></i> <span class="menu-text">Dashboard</span>
+    </a>
     <a href="list_menu.php" class="w3-bar-item w3-button w3-border w3-hover-green">
         <i class="fas fa-utensils"></i> <span class="menu-text">List Menu</span>
     </a>
@@ -136,9 +147,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <?php } ?>
     <a href="list_penjualan.php" class="w3-bar-item w3-button w3-border w3-hover-green">
         <i class="fas fa-clipboard-list"></i> <span class="menu-text">List Penjualan</span>
-    </a>
-    <a href="dashboard.php" class="w3-bar-item w3-button w3-border w3-hover-green">
-        <i class="fas fa-chart-bar"></i> <span class="menu-text">Dashboard</span>
     </a>
     <?php if ($_SESSION['username'] == 'admin') { ?>
         <a href="list_pengguna.php" class="w3-bar-item w3-button w3-border w3-hover-green">

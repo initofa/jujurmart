@@ -1382,14 +1382,14 @@ function submitModalData() {
     <button onclick="w3_close()" class="w3-bar-item w3-button w3-red w3-center close-button">
     <b>Close</b> <i class="fa fa-close" style="font-size:20px; margin-left:5px;"></i>
     </button>
+    <a href="dashboard.php" class="w3-bar-item w3-button w3-border w3-hover-green">
+        <i class="fas fa-chart-bar"></i> <span class="menu-text">Dashboard</span>
+    </a>
     <a href="list_menu.php" class="w3-bar-item w3-button w3-border w3-hover-green">
         <i class="fas fa-utensils"></i> <span class="menu-text">List Menu</span>
     </a>
     <a href="list_penjualan.php" class="w3-bar-item w3-button w3-border w3-hover-green">
         <i class="fas fa-clipboard-list"></i> <span class="menu-text">List Penjualan</span>
-    </a>
-    <a href="dashboard.php" class="w3-bar-item w3-button w3-border w3-hover-green">
-        <i class="fas fa-chart-bar"></i> <span class="menu-text">Dashboard</span>
     </a>
     <a href="logout.php" class="w3-bar-item w3-button w3-red w3-center">
     <b>Log Out </b> <i class="fas fa-sign-out-alt" style="font-size:20px"></i>
