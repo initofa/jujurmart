@@ -24,6 +24,8 @@ if (mysqli_num_rows($result) > 0) {
     $user_record = '';
 }
 
+$pesan_error = ""; // Variabel untuk pesan error
+
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['action'] == 'tambah') {
     // Ambil data dari form
@@ -42,47 +44,49 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
     if ($check_result) {
         $row = mysqli_fetch_assoc($check_result);
         if ($row) {
-            // Jika ID menu sudah ada, hapus data lama
             $gambar_lama = $row['gambar'];
             if (!empty($gambar_lama) && file_exists('gambar/menu/' . $gambar_lama)) {
-                unlink('gambar/menu/' . $gambar_lama); // Hapus gambar lama jika ada
+                unlink('gambar/menu/' . $gambar_lama);
             }
-
-            // Hapus data lama dari database
-            $delete_query = "DELETE FROM menu WHERE idmenu = '$id_menu'";
-            mysqli_query($conn, $delete_query);
+            mysqli_query($conn, "DELETE FROM menu WHERE idmenu = '$id_menu'");
         }
     }
 
     // Handle image upload jika ada
     $gambar_nama = NULL;
+    $allowed_extensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+
     if (isset($_FILES['gambar']) && $_FILES['gambar']['error'] === UPLOAD_ERR_OK) {
-        $image_name = $_FILES['gambar']['name']; // Gunakan nama asli
+        $image_name = $_FILES['gambar']['name'];
         $image_tmp_name = $_FILES['gambar']['tmp_name'];
         $image_folder = 'gambar/menu/';
+        $extension = strtolower(pathinfo($image_name, PATHINFO_EXTENSION));
 
-        // Pastikan folder gambar/menu ada dan bisa ditulis
-        if (!is_dir($image_folder)) {
-            mkdir($image_folder, 0777, true);
-        }
+        if (!in_array($extension, $allowed_extensions)) {
+            $pesan_error = "Format gambar tidak valid. Hanya jpg, jpeg, png, gif, dan webp yang diperbolehkan.";
+        } else {
+            if (!is_dir($image_folder)) {
+                mkdir($image_folder, 0777, true);
+            }
 
-        // Pindahkan gambar ke folder yang sudah ditentukan
-        $gambar_nama = $image_name; // Tetap gunakan nama asli tanpa perubahan
-        if (!move_uploaded_file($image_tmp_name, $image_folder . $gambar_nama)) {
-            echo "Error: Gagal mengupload file gambar.";
-            exit;
+            $gambar_nama = $image_name;
+            if (!move_uploaded_file($image_tmp_name, $image_folder . $gambar_nama)) {
+                $pesan_error = "Gagal mengupload file gambar.";
+            }
         }
     }
 
-    // Simpan data menu ke database
-    $sql_menu = "INSERT INTO menu (idmenu, nama, gambar, jenis, harga, userrecord, usermodified, daterecord, datemodified)
-                 VALUES ('$id_menu', '$nama', '$gambar_nama', '$jenis', '$harga', '$user_record', '$user_modified', '$now', '$now')";
+    // Simpan ke database jika tidak ada error
+    if (empty($pesan_error)) {
+        $sql_menu = "INSERT INTO menu (idmenu, nama, gambar, jenis, harga, userrecord, usermodified, daterecord, datemodified)
+                     VALUES ('$id_menu', '$nama', '$gambar_nama', '$jenis', '$harga', '$user_record', '$user_modified', '$now', '$now')";
 
-    if (mysqli_query($conn, $sql_menu)) {
-        header("Location: list_menu.php");
-        exit;
-    } else {
-        echo "Error: " . $sql_menu . "<br>" . mysqli_error($conn);
+        if (mysqli_query($conn, $sql_menu)) {
+            header("Location: list_menu.php");
+            exit;
+        } else {
+            $pesan_error = "Terjadi kesalahan saat menyimpan ke database: " . mysqli_error($conn);
+        }
     }
 }
 
@@ -250,7 +254,7 @@ mysqli_close($conn);
         <input type="text" class="w3-input w3-border w3-light-grey" name="harga" required><br>
 
         <label>Gambar</label>
-        <input type="file" id="gambarUpload" class="w3-input w3-border w3-light-grey" name="gambar" required onchange="previewFile()"><br>
+        <input type="file" id="gambarUpload" class="w3-input w3-border w3-light-grey" name="gambar" accept="image/*"  required onchange="previewFile()"><br>
 
         <!-- Preview Gambar -->
         <div>
@@ -271,6 +275,24 @@ mysqli_close($conn);
         </div>
     </form>
 </div>
+
+<!-- Modal Error -->
+<?php if (!empty($pesan_error)): ?>
+    <div id="errorModal" class="w3-modal" onclick="closeModal1(event)" style="align-items:center; padding-top: 15%;">
+        <div class="w3-modal-content w3-animate-top w3-card-4">
+            <header class="w3-container w3-red">
+                <span onclick="closeModal1()" class="w3-button w3-display-topright">&times;</span>
+                <h2>Informasi</h2>
+            </header>
+            <div class="w3-container">
+                <p><?php echo htmlspecialchars($pesan_error); ?></p>
+                <div class="w3-right">
+                    <button class="w3-button w3-grey" onclick="closeModal1()">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <script>
         function w3_open() {
@@ -384,6 +406,16 @@ mysqli_close($conn);
         noImageText.style.display = "block";
     }
 }
+
+document.getElementById('errorModal').style.display = 'block';
+
+        function closeModal1(event) {
+            const modal = document.getElementById('errorModal');
+            if (event && event.target !== modal) {
+                return;
+            }
+            modal.style.display = 'none';
+        }
     </script>
 </body>
 

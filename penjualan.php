@@ -61,6 +61,8 @@ if (!$result_menu) {
 }
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    include 'koneksi.php'; // pastikan koneksi ke database
+
     // Ambil data dari form
     $idpenjualan = $_POST['idpenjualan'];
     $tanggal = $_POST['tanggal'];
@@ -112,6 +114,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Binding parameter
     mysqli_stmt_bind_param($stmt, "sssddds", $idpenjualan, $tanggal, $nama, $grandtotal, $bayar, $kembalian, $buktiNamaFile);
     mysqli_stmt_execute($stmt);
+    mysqli_stmt_close($stmt);
 
     // Simpan detail penjualan ke tabel detilpenjualan dan kurangi stok
     foreach ($_POST['idmenu'] as $key => $idmenu) {
@@ -122,24 +125,38 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $jumlah = (int) $_POST['jumlah'][$key];
         $total = $harga * $jumlah;
 
+        // Ambil username dari menu (userrecord)
+        $query_user = "SELECT userrecord FROM menu WHERE idmenu = ?";
+        $stmt_user = mysqli_prepare($conn, $query_user);
+        if (!$stmt_user) {
+            die("Error prepare userrecord: " . mysqli_error($conn));
+        }
+        mysqli_stmt_bind_param($stmt_user, "s", $idmenu);
+        mysqli_stmt_execute($stmt_user);
+        mysqli_stmt_bind_result($stmt_user, $username);
+        mysqli_stmt_fetch($stmt_user);
+        mysqli_stmt_close($stmt_user);
+
         // Simpan detail penjualan
-        $query_detail = "INSERT INTO detilpenjualan (idpenjualan, idmenu, namamenu, harga, jumlah, total) 
-                         VALUES (?, ?, ?, ?, ?, ?)";
+        $query_detail = "INSERT INTO detilpenjualan (idpenjualan, idmenu, namamenu, harga, jumlah, total, username) 
+                         VALUES (?, ?, ?, ?, ?, ?, ?)";
         $stmt_detail = mysqli_prepare($conn, $query_detail);
         if (!$stmt_detail) {
-            die("Error: " . mysqli_error($conn));
+            die("Error prepare detail: " . mysqli_error($conn));
         }
-        mysqli_stmt_bind_param($stmt_detail, "sssdds", $idpenjualan, $idmenu, $namamenu, $harga, $jumlah, $total);
+        mysqli_stmt_bind_param($stmt_detail, "sssddds", $idpenjualan, $idmenu, $namamenu, $harga, $jumlah, $total, $username);
         mysqli_stmt_execute($stmt_detail);
+        mysqli_stmt_close($stmt_detail);
 
         // Kurangi stok menu
         $query_kurangi_stok = "UPDATE menu SET stok = stok - ? WHERE idmenu = ?";
         $stmt_kurangi_stok = mysqli_prepare($conn, $query_kurangi_stok);
         if (!$stmt_kurangi_stok) {
-            die("Error: " . mysqli_error($conn));
+            die("Error prepare kurangi stok: " . mysqli_error($conn));
         }
         mysqli_stmt_bind_param($stmt_kurangi_stok, "is", $jumlah, $idmenu);
         mysqli_stmt_execute($stmt_kurangi_stok);
+        mysqli_stmt_close($stmt_kurangi_stok);
     }
 
     // Redirect ke halaman sukses

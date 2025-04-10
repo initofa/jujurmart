@@ -275,6 +275,17 @@ if ($totalResult) {
         .action-icons a {
             margin: 5px;
         }
+
+    .namamenu {
+        font-size: 18px;
+        font-weight: bold;
+    }
+
+    @media (max-width: 600px) {
+        .namamenu {
+            font-size: 14px;
+        }
+    }
     </style>
 </head>
 
@@ -378,8 +389,7 @@ if ($totalResult) {
                         <td style="font-size: 14px; text-align: left; width: 27%">
                             <span class="w3-text-red"><?php echo htmlspecialchars($row['idmenu']); ?></span>
                            <span class="w3-text-amber"><?php echo htmlspecialchars($row['jenis']); ?></span> <br>
-                            <span
-                                style="font-size: 18px; font-weight: bold;"><?php echo htmlspecialchars($row['nama']); ?></span>
+                           <span class="namamenu" style="font-weight: bold;"><?php echo htmlspecialchars($row['nama']); ?></span>
                             <br>
                             <span style="font-size: 16px; font-weight: bold;">
                                 <?php echo ($row['stok'] > 0) ? $row['stok'] : '<span class="w3-text-red">Stok Habis</span>'; ?>

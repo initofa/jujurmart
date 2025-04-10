@@ -37,10 +37,10 @@ while ($row = mysqli_fetch_assoc($result)) {
     $idpenjualan = $row['idpenjualan'];
 
     // Get detailed order information from detilpenjualan for each order
-    $details_query = "SELECT dp.idmenu, m.userrecord, m.nama AS namamenu, dp.harga, dp.jumlah, dp.total
-                    FROM detilpenjualan dp
-                    JOIN menu m ON dp.idmenu = m.idmenu
-                    WHERE dp.idpenjualan = '$idpenjualan'";
+    $details_query = "SELECT dp.idmenu, dp.username, m.nama AS namamenu, dp.harga, dp.jumlah, dp.total
+    FROM detilpenjualan dp
+    JOIN menu m ON dp.idmenu = m.idmenu
+    WHERE dp.idpenjualan = '$idpenjualan'";
     $details_result = mysqli_query($conn, $details_query);
 
     $details = [];
@@ -531,7 +531,7 @@ orderData.details.forEach(detail => {
 
     htmlContent += `
         <tr>
-            <td>${detail.userrecord}</td>
+            <td>${detail.username}</td>
             <td>${detail.namamenu}</td>
             <td>${harga.toLocaleString('id-ID')} × ${jumlah} <br> <strong>Rp ${total.toLocaleString('id-ID')}</strong></td>
         </tr>
