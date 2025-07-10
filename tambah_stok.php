@@ -1,8 +1,7 @@
 <?php
-include 'koneksi.php'; // Include database connection file
-date_default_timezone_set('Asia/Jakarta'); // Set the timezone
-
-session_start(); // Start session for user data access
+include 'koneksi.php';
+date_default_timezone_set('Asia/Jakarta');
+session_start();
 
 if (!isset($_SESSION["username"])) {
     header('Location: index.php');
@@ -12,7 +11,6 @@ if (!isset($_SESSION["username"])) {
 $username = $_SESSION['username'];
 $query = "SELECT * FROM pengguna WHERE username = '" . mysqli_real_escape_string($conn, $username) . "'";
 $result = mysqli_query($conn, $query);
-
 if (!$result) {
     die("Query error: " . mysqli_error($conn));
 }
@@ -21,64 +19,49 @@ if (!isset($_GET['id']) || empty($_GET['id'])) {
     die("Id menu tidak ditemukan.");
 }
 
-$idmenu = $_GET['id'];
+$idmenu = $_GET['id']; 
+$pesan_error = "";
 
-// Fetch current stock from the database
-$query_stok = "SELECT stok FROM menu WHERE idmenu = '$idmenu'";
-$result_stok = mysqli_query($conn, $query_stok);
-
-if (!$result_stok || mysqli_num_rows($result_stok) == 0) {
-    die("Data stok menu tidak ditemukan.");
+// Tampilkan stok sebelumnya
+$stok_lama_query = "SELECT stok FROM menu WHERE idmenu = '$idmenu'";
+$stok_lama_result = mysqli_query($conn, $stok_lama_query);
+$stok_sebelumnya = 0;
+if ($stok_lama_result && mysqli_num_rows($stok_lama_result) > 0) {
+    $stok_lama_data = mysqli_fetch_assoc($stok_lama_result);
+    $stok_sebelumnya = (int)$stok_lama_data['stok'];
 }
 
-$row_stok = mysqli_fetch_assoc($result_stok);
-$stok = $row_stok['stok']; // Store the current stock
-
-// Handle form submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['action'] == 'update') {
     $stok = mysqli_real_escape_string($conn, $_POST['stok']);
-    $folder_gambar = __DIR__ . '/gambar/stok/'; // Gunakan path absolut
-    $allowed_extensions = ['jpg', 'jpeg', 'png', 'gif']; // Ekstensi gambar yang diperbolehkan
-    $pesan_error = "";
+    $folder_gambar = __DIR__ . '/gambar/stok/';
+    $allowed_extensions = ['jpg', 'jpeg', 'png', 'gif'];
 
-    // Pastikan direktori ada, jika tidak, buat direktori
     if (!is_dir($folder_gambar)) {
-        mkdir($folder_gambar, 0755, true); // Buat direktori dengan izin 755
+        mkdir($folder_gambar, 0755, true);
     }
 
     if (isset($_FILES['gambar']) && $_FILES['gambar']['error'] == 0) {
-        // Dapatkan informasi file gambar yang di-upload
         $file_info = pathinfo($_FILES['gambar']['name']);
         $extension = strtolower($file_info['extension']);
 
-        // Periksa apakah ekstensi gambar diizinkan
         if (in_array($extension, $allowed_extensions)) {
-            // Hapus gambar lama jika ada
-            $gambar_lama = glob($folder_gambar . $idmenu . '.*'); // Ambil semua file gambar yang sesuai dengan idmenu
-            if (!empty($gambar_lama)) {
-                unlink($gambar_lama[0]); // Hapus gambar lama
-            }
-
-            // Format nama file baru: idmenu_jumlahstok_jam-menit-detik_tanggalbulantahun
-            $waktu = date('H-i-s_dmY'); // Ganti : dengan -
+            $waktu = date('H-i-s_dmY');
             $nama_file_baru = $idmenu . '_' . $stok . '_' . $waktu . '.' . $extension;
-
-            // Simpan gambar baru dengan nama yang telah diformat
             $gambar_baru = $folder_gambar . $nama_file_baru;
+
             if (move_uploaded_file($_FILES['gambar']['tmp_name'], $gambar_baru)) {
-                // Update stok dalam database
                 $update_query = "UPDATE menu SET stok = '$stok' WHERE idmenu = '$idmenu'";
                 if (mysqli_query($conn, $update_query)) {
                     header("Location: list_menu.php");
                     exit;
                 } else {
-                    $pesan_error = "Terjadi kesalahan saat mengupdate data: " . mysqli_error($conn);
+                    $pesan_error = "Terjadi kesalahan saat mengupdate stok: " . mysqli_error($conn);
                 }
             } else {
                 $pesan_error = "Gagal meng-upload gambar.";
             }
         } else {
-            $pesan_error = "Format gambar tidak valid. Hanya gambar dengan ekstensi JPG, JPEG, PNG, atau GIF yang diizinkan.";
+            $pesan_error = "Format gambar tidak valid. Hanya JPG, JPEG, PNG, atau GIF.";
         }
     } else {
         $pesan_error = "Gambar belum dipilih atau terjadi kesalahan.";
@@ -86,9 +69,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
 }
 mysqli_close($conn);
 ?>
-<!DOCTYPE html>
-<html lang="en">
 
+<!DOCTYPE html>
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -162,18 +145,24 @@ mysqli_close($conn);
             display: block;
         }
 
-        /* Sticky Header */
-        .w3-blue {
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            display: flex;
-            align-items: center;
+       .sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 999; /* pastikan lebih tinggi dari sidebar */
+    display: flex;
+    align-items: center;
+}
+
+        .center-img {
+            display: block;
+            margin: 10px auto;
+            max-width: 200px;
+            height: auto;
         }
     </style>
 </head>
 <body>
-    <!-- Sidebar Overlay -->
+  <!-- Sidebar Overlay -->
     <div id="sidebarOverlay" class="w3-sidebar-overlay" onclick="w3_close()"></div>
 
 <!-- Sidebar -->
@@ -202,95 +191,84 @@ mysqli_close($conn);
 <!-- End Sidebar -->
 
 
-    <!-- Header -->
-    <div class="w3-green" style="display: flex; align-items: center;">
-        <button class="w3-button w3-xlarge" onclick="w3_open()">☰</button>
-        <div style="flex-grow: 1; display: flex; justify-content: center;">
-            <h1 style="margin: 0; line-height: 3.5rem; margin-bottom:10px;"><b>Tambah Stok</b></h1>
-        </div>
+   <!-- Header -->
+<div class="w3-green sticky-header">
+    <button class="w3-button w3-xlarge" onclick="w3_open()">☰</button>
+    <div style="flex-grow: 1; display: flex; justify-content: center;">
+        <h1 style="margin: 0; line-height: 3.5rem; margin-bottom:10px;"><b>Tambah Stok</b></h1>
     </div>
+</div>
 
-<div id="mainContent" class="w3-padding-16">
+
+<div id="mainContent" class="w3-container w3-padding-16">
+   <!--  Riwayat Gambar Bukti Stok -->
+<div class="w3-container w3-card-4 w3-light-grey w3-padding-16 w3-margin">
+    <div class="w3-center">
+        <div class='w3-panel w3-light-grey'>
+            Sisa stok sekarang:<?php echo $stok_sebelumnya; ?>
+        </div>
+        <h4>Bukti Stok sebelumnya</h4>
+        <?php
+            $image_displayed = false;
+            $allowed_extensions = ['jpg', 'jpeg', 'png', 'gif'];
+            $folder_gambar = 'gambar/stok/';
+            $pattern = $folder_gambar . $idmenu . '_*.{jpg,jpeg,png,gif}';
+            $files = glob($pattern, GLOB_BRACE);
+
+            if (!empty($files)) {
+                usort($files, function($a, $b) {
+                    return filemtime($b) - filemtime($a);
+                });
+
+                $latest_image = $files[0];
+                if (file_exists($latest_image)) {
+                    echo "<img src='$latest_image' alt='Bukti stok terbaru' class='center-img'>";
+                    $image_displayed = true;
+                }
+            }
+
+            if (!$image_displayed) {
+                echo "<div style='text-align: center;'>Belum ada gambar bukti stok yang tersedia.</div>";
+            }
+        ?>
+    </div>
+</div>
+
+    <!--  Form Input Stok -->
     <form action="tambah_stok.php?id=<?php echo htmlspecialchars($idmenu); ?>" 
           method="post" enctype="multipart/form-data" 
           class="w3-container w3-card-4 w3-light-grey w3-padding-16 w3-margin">
-        <input type="hidden" name="idmenu" value="<?php echo htmlspecialchars($idmenu); ?>" readonly><br>
-        
-        <label>Stok</label>
+
+        <input type="hidden" name="idmenu" value="<?php echo htmlspecialchars($idmenu); ?>">
+
+        <label>Tambahan Stok</label>
         <input type="number" name="stok" class="w3-input w3-border w3-light-grey" 
-               value="<?php echo htmlspecialchars($stok); ?>" oninput="checkChanges()" required><br>
+               placeholder="Masukkan stok" oninput="checkChanges()" required><br>
 
         <label>Bukti Stok</label>
-        <input type="file" class="w3-input w3-border w3-light-grey" 
-               name="gambar" id="gambarUpload" accept="image/*" capture="camera" oninput="checkChanges()" required><br>
+        <input type="file" name="gambar" class="w3-input w3-border w3-light-grey" 
+               id="gambarUpload" accept="image/*" capture="camera" oninput="checkChanges()" required><br>
 
-       <!-- Preview Gambar -->
-<div style="display: flex; flex-direction: column; align-items: center;">
-    <?php
-    $image_displayed = false;
-    $allowed_extensions = ['jpg', 'jpeg', 'png', 'gif'];
-    $folder_gambar = 'gambar/stok/';
-    
-    // Ambil semua file yang sesuai dengan pola (idmenu diikuti oleh _ dan tanggal)
-    $pattern = $folder_gambar . $idmenu . '_*.{jpg,jpeg,png,gif,web}';
-    $files = glob($pattern, GLOB_BRACE);
+        <!-- Preview gambar sebelum upload -->
+        <img id="previewImage" src="" alt="Preview Gambar Baru" class="center-img" style="display: none;"><br>
 
-    // Urutkan file berdasarkan tanggal (dari nama file)
-    if (!empty($files)) {
-        usort($files, function($a, $b) {
-            return filemtime($b) - filemtime($a); // Urutkan berdasarkan tanggal terbaru
-        });
-
-        $latest_image = $files[0]; // Ambil gambar terbaru
-
-        if (file_exists($latest_image)) {
-            echo "<img id='previewImage' src='$latest_image' alt='Gambar Saat Ini' 
-                  style='max-width: 200px; height: auto; margin-bottom: 10px; display: block; margin: 0 auto;'>";
-            $image_displayed = true;
-        }
-    }
-
-    if (!$image_displayed) {
-        echo "<img id='previewImage' src='' alt='Preview Gambar Baru' 
-              style='max-width: 200px; height: auto; display: none; margin-bottom: 10px;'>";
-        echo "<div style='text-align: center;'> Harap unggah bukti stok!</div>";
-    }
-    ?>
-</div><br>
+        <?php if (!empty($pesan_error)): ?>
+            <div class="w3-panel w3-red w3-padding"><?php echo $pesan_error; ?></div>
+        <?php endif; ?>
 
         <div class="w3-half">
-            <a href="list_menu.php" class="w3-button w3-container w3-orange w3-padding-16" 
-               style="width: 100%;">Kembali</a>
+            <a href="list_menu.php" class="w3-button w3-orange w3-padding-16" style="width: 100%;">Kembali</a>
         </div>
         <div class="w3-half">
             <input type="hidden" name="action" value="update">
-            <input type="submit" id="updateButton" class="w3-button w3-green w3-container w3-padding-16" 
-                   style="width: 100%;" value="Simpan" disabled>
+            <input type="submit" id="updateButton" class="w3-button w3-green w3-padding-16" style="width: 100%;" value="Simpan" disabled>
         </div>
     </form>
 </div>
 
-<!-- Error Modal -->
-<?php if (!empty($pesan_error)): ?>
-    <div id="errorModal" class="w3-modal" onclick="closeModal1(event)" style="align-items:center; padding-top: 15%;">
-        <div class="w3-modal-content w3-animate-top w3-card-4">
-            <header class="w3-container w3-red">
-                <span onclick="closeModal1()" class="w3-button w3-display-topright">&times;</span>
-                <h2>Informasi</h2>
-            </header>
-            <div class="w3-container">
-                <p><?php echo htmlspecialchars($pesan_error); ?></p>
-                <div class="w3-right">
-                    <button class="w3-button w3-grey" onclick="closeModal1()">Tutup</button>
-                </div>
-            </div>
-        </div>
-    </div>
-<?php endif; ?>
-
-<!-- JavaScript untuk Preview Gambar Baru -->
+<!--  JavaScript Preview & Button Activation -->
 <script>
-     function w3_open() {
+       function w3_open() {
         document.getElementById("mySidebar").classList.add("show");
         document.getElementById("sidebarOverlay").classList.add("show");
     }
@@ -299,48 +277,26 @@ mysqli_close($conn);
         document.getElementById("mySidebar").classList.remove("show");
         document.getElementById("sidebarOverlay").classList.remove("show");
     }
-    document.getElementById('gambarUpload').addEventListener('change', function(event) {
-        const file = event.target.files[0];
-        const preview = document.getElementById('previewImage');
+function checkChanges() {
+    const stokInput = document.querySelector('input[name="stok"]');
+    const gambarInput = document.getElementById('gambarUpload');
+    const submitBtn = document.getElementById('updateButton');
 
-        if (file) {
-            preview.src = URL.createObjectURL(file);
+    // Preview gambar
+    if (gambarInput.files && gambarInput.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById('previewImage');
+            preview.src = e.target.result;
             preview.style.display = 'block';
-        } else {
-            preview.src = '';
-            preview.style.display = 'none';
-        }
-    });
-
-    document.addEventListener("DOMContentLoaded", function () {
-    const stokInput = document.querySelector("input[name='stok']");
-    const gambarInput = document.querySelector("input[name='gambar']");
-    const submitButton = document.querySelector("input[type='submit']");
-    let initialStok = stokInput.value;
-    let gambarChanged = false;
-
-    stokInput.addEventListener("input", checkChanges);
-    gambarInput.addEventListener("change", function () {
-        gambarChanged = gambarInput.files.length > 0;
-        checkChanges();
-    });
-
-    function checkChanges() {
-        let stokChanged = stokInput.value !== initialStok;
-        submitButton.disabled = !(stokChanged && gambarChanged);
+        };
+        reader.readAsDataURL(gambarInput.files[0]);
     }
 
-    checkChanges();
-});
-document.getElementById('errorModal').style.display = 'block';
-        
-        function closeModal1(event) {
-            const modal = document.getElementById('errorModal');
-            if (event && event.target !== modal) {
-                return;
-            }
-            modal.style.display = 'none';
-        }
+    // Enable tombol submit
+    submitBtn.disabled = !(stokInput.value && gambarInput.files.length > 0);
+}
 </script>
+
 </body>
 </html>
