@@ -32,7 +32,9 @@ if ($stok_lama_result && mysqli_num_rows($stok_lama_result) > 0) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['action'] == 'update') {
-    $stok = mysqli_real_escape_string($conn, $_POST['stok']);
+    $stok_tambah = (int)mysqli_real_escape_string($conn, $_POST['stok']);
+    $stok_baru = $stok_sebelumnya + $stok_tambah; 
+
     $folder_gambar = __DIR__ . '/gambar/stok/';
     $allowed_extensions = ['jpg', 'jpeg', 'png', 'gif'];
 
@@ -46,11 +48,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
 
         if (in_array($extension, $allowed_extensions)) {
             $waktu = date('H-i-s_dmY');
-            $nama_file_baru = $idmenu . '_' . $stok . '_' . $waktu . '.' . $extension;
+            $nama_file_baru = $idmenu . '_' . $stok_baru . '_' . $waktu . '.' . $extension;
             $gambar_baru = $folder_gambar . $nama_file_baru;
 
             if (move_uploaded_file($_FILES['gambar']['tmp_name'], $gambar_baru)) {
-                $update_query = "UPDATE menu SET stok = '$stok' WHERE idmenu = '$idmenu'";
+                $update_query = "UPDATE menu SET stok = '$stok_baru' WHERE idmenu = '$idmenu'";
                 if (mysqli_query($conn, $update_query)) {
                     header("Location: list_menu.php");
                     exit;
